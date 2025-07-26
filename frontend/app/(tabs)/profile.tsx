@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
 
 type TabType = 'loans' | 'requests' | 'messages';
 
@@ -59,7 +60,7 @@ export default function ProfileScreen() {
       case 'requests':
         return (
           <View style={styles.emptyState}>
-            <Ionicons name="document-text-outline" size={48} color="#9ca3af" />
+            <Ionicons name="document-text-outline" size={48} color={Colors.textTertiary} />
             <Text style={styles.emptyStateText}>No requests yet</Text>
             <Text style={styles.emptyStateSubtext}>Your borrowing requests will appear here</Text>
           </View>
@@ -67,7 +68,7 @@ export default function ProfileScreen() {
       case 'messages':
         return (
           <View style={styles.emptyState}>
-            <Ionicons name="chatbubbles-outline" size={48} color="#9ca3af" />
+            <Ionicons name="chatbubbles-outline" size={48} color={Colors.textTertiary} />
             <Text style={styles.emptyStateText}>No messages yet</Text>
             <Text style={styles.emptyStateSubtext}>Your conversations will appear here</Text>
           </View>
@@ -88,14 +89,14 @@ export default function ProfileScreen() {
           <View style={styles.profileDetails}>
             <Text style={styles.profileName}>Your Profile</Text>
             <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={16} color="#fbbf24" />
+              <Ionicons name="star" size={16} color={Colors.warning} />
               <Text style={styles.rating}>4.7</Text>
               <Text style={styles.dealsText}>23 deals completed</Text>
             </View>
           </View>
         </View>
         <TouchableOpacity style={styles.settingsButton}>
-          <Ionicons name="settings-outline" size={24} color="#6b7280" />
+          <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -140,15 +141,15 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fef7ed', // slight orange hue background
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: Spacing.xl,
   },
   profileInfo: {
     flexDirection: 'row',
@@ -159,23 +160,23 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#f97316', // orange
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   avatarText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: Colors.textLight,
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.bold,
   },
   profileDetails: {
     flex: 1,
   },
   profileName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: Typography.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   ratingContainer: {
@@ -184,134 +185,122 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   rating: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
     marginRight: 4,
   },
   dealsText: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
   settingsButton: {
-    padding: 8,
+    padding: Spacing.sm,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    borderRadius: 12,
+    backgroundColor: Colors.backgroundWhite,
+    marginHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.md,
     padding: 4,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: Spacing.xl,
+    ...Shadows.sm,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.sm,
     alignItems: 'center',
   },
   activeTab: {
-    backgroundColor: '#f3f4f6', // light gray background
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: Colors.borderLight,
+    ...Shadows.sm,
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6b7280',
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.textSecondary,
   },
   activeTabText: {
-    color: '#1f2937',
-    fontWeight: '600',
+    color: Colors.textPrimary,
+    fontWeight: FontWeight.semibold,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
   },
   loanCard: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    ...Shadows.md,
   },
   loanHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   loanTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
   },
   activeTag: {
-    backgroundColor: '#10b981', // green
-    paddingHorizontal: 12,
+    backgroundColor: Colors.success,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
   },
   activeTagText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
+    color: Colors.textLight,
+    fontSize: Typography.xs,
+    fontWeight: FontWeight.semibold,
   },
   loanDetails: {
-    marginBottom: 20,
+    marginBottom: Spacing.xl,
   },
   loanDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   loanDetailLabel: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
   loanDetailValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
   },
   loanDetailValueGreen: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#10b981', // green
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.success,
   },
   progressSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   progressBar: {
     flex: 1,
     height: 8,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: Colors.border,
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#374151', // dark gray
+    backgroundColor: Colors.textPrimary,
     borderRadius: 4,
   },
   progressText: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: Typography.xs,
+    color: Colors.textSecondary,
     minWidth: 80,
   },
   emptyState: {
@@ -320,15 +309,15 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#6b7280',
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textSecondary,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
   emptyStateSubtext: {
-    fontSize: 14,
-    color: '#9ca3af',
+    fontSize: Typography.sm,
+    color: Colors.textTertiary,
     textAlign: 'center',
   },
 });

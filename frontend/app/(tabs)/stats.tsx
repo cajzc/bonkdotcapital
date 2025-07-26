@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
 
 interface StatCardProps {
   icon: string;
@@ -82,25 +83,25 @@ export default function StatsScreen() {
         <View style={styles.statsGrid}>
           <StatCard
             icon="link"
-            iconColor="#f97316"
+            iconColor={Colors.primary}
             value="2.4B"
             label="Total BONK Lent"
           />
           <StatCard
             icon="trending-up"
-            iconColor="#10b981"
+            iconColor={Colors.success}
             value="12.8%"
             label="Avg APY"
           />
           <StatCard
             icon="people"
-            iconColor="#3b82f6"
+            iconColor={Colors.info}
             value="1,247"
             label="Active Loans"
           />
           <StatCard
             icon="shield-checkmark"
-            iconColor="#8b5cf6"
+            iconColor={Colors.purple}
             value="0.3%"
             label="Default Rate"
           />
@@ -138,17 +139,17 @@ export default function StatsScreen() {
             <TokenProgress
               token="SOL"
               percentage={45}
-              color="#8b5cf6"
+              color={Colors.purple}
             />
             <TokenProgress
               token="JUP"
               percentage={28}
-              color="#3b82f6"
+              color={Colors.info}
             />
             <TokenProgress
               token="USDC"
               percentage={19}
-              color="#10b981"
+              color={Colors.success}
             />
           </View>
         </View>
@@ -160,45 +161,41 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fef7ed', // slight orange hue background
+    backgroundColor: Colors.background,
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: Spacing.xl,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: Typography.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: Spacing.xxl,
   },
   statCard: {
     width: '48%',
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
-    marginBottom: 12,
+    ...Shadows.md,
+    marginBottom: Spacing.md,
   },
   statIcon: {
     width: 48,
@@ -206,38 +203,34 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: Typography.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: Typography.xs,
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   section: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+    ...Shadows.md,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 16,
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.lg,
   },
   lendersList: {
-    gap: 12,
+    gap: Spacing.md,
   },
   lenderRow: {
     flexDirection: 'row',
@@ -247,31 +240,31 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f97316',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   rankText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: Colors.textLight,
+    fontSize: Typography.xs,
+    fontWeight: FontWeight.bold,
   },
   lenderInfo: {
     flex: 1,
   },
   lenderUsername: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontSize: Typography.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   lenderStats: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
   tokensList: {
-    gap: 16,
+    gap: Spacing.lg,
   },
   tokenRow: {
     flexDirection: 'row',
@@ -279,21 +272,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   tokenName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1f2937',
+    fontSize: Typography.base,
+    fontWeight: FontWeight.medium,
+    color: Colors.textPrimary,
     width: 60,
   },
   progressContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   progressBar: {
     flex: 1,
     height: 8,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: Colors.border,
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -302,9 +295,9 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   progressText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
     minWidth: 35,
   },
 });

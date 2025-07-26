@@ -9,8 +9,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
 import { LinearGradient } from 'expo-linear-gradient';
+import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
 
 interface DropdownProps {
   placeholder: string;
@@ -24,7 +24,7 @@ const Dropdown: React.FC<DropdownProps> = ({ placeholder, value, onPress }) => {
       <Text style={[styles.dropdownText, value ? styles.dropdownTextFilled : styles.dropdownTextPlaceholder]}>
         {value || placeholder}
       </Text>
-      <Ionicons name="chevron-down" size={20} color="#9ca3af" />
+              <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
     </TouchableOpacity>
   );
 };
@@ -64,7 +64,7 @@ export default function BorrowScreen() {
             <TextInput
               style={styles.textInput}
               placeholder="e.g., 25,000,000"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={Colors.textTertiary}
               value={bonkAmount}
               onChangeText={setBonkAmount}
               keyboardType="numeric"
@@ -90,7 +90,7 @@ export default function BorrowScreen() {
             <TextInput
               style={styles.textInput}
               placeholder="e.g., 50"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={Colors.textTertiary}
               value={tokenAmount}
               onChangeText={setTokenAmount}
               keyboardType="numeric"
@@ -116,7 +116,7 @@ export default function BorrowScreen() {
             <TextInput
               style={[styles.textInput, styles.textArea]}
               placeholder="Tell lenders why you need this loan..."
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={Colors.textTertiary}
               value={message}
               onChangeText={setMessage}
               multiline
@@ -129,7 +129,7 @@ export default function BorrowScreen() {
         {/* Submit Button */}
         <TouchableOpacity style={styles.submitButtonContainer} onPress={handleSubmitRequest}>
           <LinearGradient
-            colors={['#3b82f6', '#8b5cf6']}
+            colors={[Colors.info, Colors.purple]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.submitButton}
@@ -141,7 +141,7 @@ export default function BorrowScreen() {
         {/* Estimated APY Range */}
         <View style={styles.apyCard}>
           <View style={styles.apyHeader}>
-            <Ionicons name="trending-up" size={20} color="#3b82f6" />
+            <Ionicons name="trending-up" size={20} color={Colors.info} />
             <Text style={styles.apyTitle}>Estimated APY Range</Text>
           </View>
           <Text style={styles.apyValue}>12-18%</Text>
@@ -155,144 +155,132 @@ export default function BorrowScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fef7ed', // slight orange hue background
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: Spacing.xl,
   },
 
   headerContent: {
     flex: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: Typography.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
   },
   formCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+    ...Shadows.md,
   },
   formTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 20,
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xl,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: Spacing.xl,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1f2937',
-    backgroundColor: '#f9fafb',
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    fontSize: Typography.base,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.borderLight,
   },
   textArea: {
     height: 100,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
   },
   dropdown: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#f9fafb',
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.borderLight,
   },
   dropdownText: {
-    fontSize: 16,
+    fontSize: Typography.base,
     flex: 1,
   },
   dropdownTextPlaceholder: {
-    color: '#9ca3af',
+    color: Colors.textTertiary,
   },
   dropdownTextFilled: {
-    color: '#1f2937',
+    color: Colors.textPrimary,
   },
   submitButtonContainer: {
-    marginBottom: 20,
-    borderRadius: 20,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
+    marginBottom: Spacing.xl,
+    borderRadius: BorderRadius.xl,
+    ...Shadows.info,
   },
   submitButton: {
-    borderRadius: 20,
-    paddingVertical: 16,
+    borderRadius: BorderRadius.xl,
+    paddingVertical: Spacing.lg,
     alignItems: 'center',
   },
   submitButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
+    color: Colors.textLight,
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.semibold,
   },
   apyCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+    ...Shadows.md,
   },
   apyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   apyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginLeft: 8,
+    fontSize: Typography.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
+    marginLeft: Spacing.sm,
   },
   apyValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#3b82f6',
+    fontSize: Typography.xxxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.info,
     marginBottom: 4,
   },
   apyDescription: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
 });

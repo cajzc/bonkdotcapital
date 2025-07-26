@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
 
 
 interface DropdownProps {
@@ -24,7 +25,7 @@ const Dropdown: React.FC<DropdownProps> = ({ placeholder, value, onPress }) => {
       <Text style={[styles.dropdownText, value ? styles.dropdownTextFilled : styles.dropdownTextPlaceholder]}>
         {value || placeholder}
       </Text>
-      <Ionicons name="chevron-down" size={20} color="#9ca3af" />
+              <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
     </TouchableOpacity>
   );
 };
@@ -64,7 +65,7 @@ export default function LendScreen() {
             <TextInput
               style={styles.textInput}
               placeholder="e.g., 50,000,000"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={Colors.textTertiary}
               value={lendingAmount}
               onChangeText={setLendingAmount}
               keyboardType="numeric"
@@ -90,7 +91,7 @@ export default function LendScreen() {
             <TextInput
               style={styles.textInput}
               placeholder="e.g., 100"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={Colors.textTertiary}
               value={minTokenAmount}
               onChangeText={setMinTokenAmount}
               keyboardType="numeric"
@@ -121,9 +122,9 @@ export default function LendScreen() {
             <Switch
               value={autoAccept}
               onValueChange={setAutoAccept}
-              trackColor={{ false: '#d1d5db', true: '#f97316' }}
-              thumbColor={autoAccept ? '#ffffff' : '#ffffff'}
-              ios_backgroundColor="#d1d5db"
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor={Colors.textLight}
+              ios_backgroundColor={Colors.border}
             />
           </View>
         </View>
@@ -136,7 +137,7 @@ export default function LendScreen() {
         {/* Matching Preview */}
         <View style={styles.previewCard}>
           <View style={styles.previewHeader}>
-            <Ionicons name="locate" size={20} color="#f97316" />
+            <Ionicons name="locate" size={20} color={Colors.primary} />
             <Text style={styles.previewTitle}>Matching Preview</Text>
           </View>
           
@@ -163,89 +164,85 @@ export default function LendScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fef7ed', // slight orange hue background
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: Spacing.xl,
   },
 
   headerContent: {
     flex: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: Typography.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
   },
   formCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+    ...Shadows.md,
   },
   formTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 20,
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xl,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: Spacing.xl,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1f2937',
-    backgroundColor: '#f9fafb',
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    fontSize: Typography.base,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.borderLight,
   },
   dropdown: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#f9fafb',
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.borderLight,
   },
   dropdownText: {
-    fontSize: 16,
+    fontSize: Typography.base,
     flex: 1,
   },
   dropdownTextPlaceholder: {
-    color: '#9ca3af',
+    color: Colors.textTertiary,
   },
   dropdownTextFilled: {
-    color: '#1f2937',
+    color: Colors.textPrimary,
   },
   toggleGroup: {
     flexDirection: 'row',
@@ -255,71 +252,63 @@ const styles = StyleSheet.create({
   },
   toggleContent: {
     flex: 1,
-    marginRight: 16,
+    marginRight: Spacing.lg,
   },
   toggleLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1f2937',
+    fontSize: Typography.base,
+    fontWeight: FontWeight.medium,
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   toggleDescription: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
     lineHeight: 20,
   },
   createButton: {
-    backgroundColor: '#f97316',
-    borderRadius: 20,
-    paddingVertical: 16,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    paddingVertical: Spacing.lg,
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#f97316',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
+    marginBottom: Spacing.xl,
+    ...Shadows.lg,
   },
   createButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
+    color: Colors.textLight,
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.semibold,
   },
   previewCard: {
-    backgroundColor: '#f97316',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#f97316',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+    ...Shadows.lg,
   },
   previewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   previewTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: 'white',
-    marginLeft: 8,
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textLight,
+    marginLeft: Spacing.sm,
   },
   previewRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   previewLabel: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: Typography.sm,
+    color: Colors.overlayLight,
   },
   previewValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ffffff', // white for better contrast on orange
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textLight,
   },
 });

@@ -10,6 +10,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, SemanticColors } from '../../constants';
 
 interface RequestCardProps {
   userImage: string;
@@ -46,7 +47,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
           <View style={styles.userDetails}>
             <Text style={styles.username}>{username}</Text>
             <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={14} color="#fbbf24" />
+              <Ionicons name="star" size={14} color={Colors.warning} />
               <Text style={styles.rating}>{rating}</Text>
             </View>
           </View>
@@ -64,7 +65,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
           <Ionicons 
             name={isLending ? "arrow-up" : "arrow-down"} 
             size={16} 
-            color={isLending ? "#10b981" : "#3b82f6"} 
+            color={isLending ? Colors.success : Colors.info} 
           />
           <Text style={styles.collateral}>{collateral}</Text>
         </View>
@@ -78,7 +79,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
       
       <View style={styles.cardFooter}>
         <View style={styles.commentsContainer}>
-          <Ionicons name="chatbubble-outline" size={16} color="#6b7280" />
+          <Ionicons name="chatbubble-outline" size={16} color={Colors.textSecondary} />
           <Text style={styles.commentsCount}>{comments}</Text>
         </View>
         <TouchableOpacity style={styles.viewDetailsButton}>
@@ -100,7 +101,7 @@ export default function FeedScreen() {
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color="#6b7280" />
+            <Ionicons name="notifications-outline" size={24} color={Colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.connectButton}>
             <Ionicons name="wallet-outline" size={16} color="white" />
@@ -121,7 +122,7 @@ export default function FeedScreen() {
         
         <View style={styles.statCard}>
           <View style={styles.statIcon}>
-            <Ionicons name="trending-up" size={20} color="#10b981" />
+            <Ionicons name="trending-up" size={20} color={Colors.success} />
           </View>
           <Text style={styles.statLabel}>Avg APY</Text>
           <Text style={styles.statValue}>12.8%</Text>
@@ -129,7 +130,7 @@ export default function FeedScreen() {
         
         <View style={styles.statCard}>
           <View style={styles.statIcon}>
-            <Ionicons name="link" size={20} color="#f97316" />
+            <Ionicons name="link" size={20} color={Colors.primary} />
           </View>
           <Text style={styles.statLabel}>Volume</Text>
           <Text style={styles.statValue}>2.4B</Text>
@@ -139,15 +140,15 @@ export default function FeedScreen() {
       {/* Search and Filter */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#9ca3af" />
+          <Ionicons name="search" size={20} color={Colors.textTertiary} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search requests..."
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={Colors.textTertiary}
           />
         </View>
         <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="filter" size={20} color="#6b7280" />
+          <Ionicons name="filter" size={20} color={Colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -186,149 +187,129 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fef7ed', // slight orange hue background
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: Spacing.xl,
   },
   headerLeft: {
     flex: 1,
   },
   appName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#f97316', // orange
+    fontSize: Typography.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.primary,
   },
   appSubtitle: {
-    fontSize: 14,
-    color: '#6b7280', // gray
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
     marginTop: 2,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   notificationButton: {
-    padding: 8,
+    padding: Spacing.sm,
   },
   connectButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f97316',
-    paddingHorizontal: 16,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: 10,
-    borderRadius: 25,
+    borderRadius: BorderRadius.xxl,
     gap: 6,
-    shadowColor: '#f97316',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Shadows.primary,
   },
   connectText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
+    color: Colors.textLight,
+    fontWeight: FontWeight.semibold,
+    fontSize: Typography.sm,
   },
   statsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 20,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Shadows.md,
   },
   statIcon: {
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   activeDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#10b981', // green
+    backgroundColor: Colors.success,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: Typography.xs,
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
   },
   searchContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 20,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
   },
   searchBar: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 16,
-    paddingHorizontal: 16,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    ...Shadows.sm,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#1f2937',
+    marginLeft: Spacing.sm,
+    fontSize: Typography.base,
+    color: Colors.textPrimary,
   },
   filterButton: {
-    backgroundColor: 'white',
-    borderRadius: 16,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.lg,
     padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    ...Shadows.sm,
   },
   feedContainer: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
   },
   requestCard: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
+    ...Shadows.md,
   },
   requestHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   userInfo: {
     flexDirection: 'row',
@@ -338,15 +319,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   userDetails: {
     flex: 1,
   },
   username: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontSize: Typography.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   ratingContainer: {
@@ -355,29 +336,29 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   rating: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
   typeTag: {
-    paddingHorizontal: 12,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: BorderRadius.xl,
   },
   lendingTag: {
-    backgroundColor: '#dcfce7',
+    backgroundColor: SemanticColors.lending.background,
   },
   borrowingTag: {
-    backgroundColor: '#dbeafe',
+    backgroundColor: SemanticColors.borrowing.background,
   },
   typeText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: Typography.xs,
+    fontWeight: FontWeight.semibold,
   },
   lendingText: {
-    color: '#166534',
+    color: SemanticColors.lending.text,
   },
   borrowingText: {
-    color: '#1e40af',
+    color: SemanticColors.borrowing.text,
   },
   requestDetails: {
     marginBottom: 12,
@@ -390,12 +371,12 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: Colors.textPrimary,
     marginRight: 8,
   },
   collateral: {
     fontSize: 16,
-    color: '#6b7280',
+    color: Colors.textSecondary,
     marginLeft: 4,
   },
   apyRow: {
@@ -406,15 +387,15 @@ const styles = StyleSheet.create({
   apy: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#10b981',
+    color: Colors.success,
   },
   duration: {
     fontSize: 14,
-    color: '#6b7280',
+    color: Colors.textSecondary,
   },
   description: {
     fontSize: 14,
-    color: '#4b5563',
+    color: Colors.textSecondary,
     lineHeight: 20,
     marginBottom: 16,
   },
@@ -430,21 +411,17 @@ const styles = StyleSheet.create({
   },
   commentsCount: {
     fontSize: 14,
-    color: '#6b7280',
+    color: Colors.textSecondary,
   },
   viewDetailsButton: {
-    backgroundColor: '#f97316',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 25,
-    shadowColor: '#f97316',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Shadows.primary,
   },
   viewDetailsText: {
-    color: 'white',
+    color: Colors.textLight,
     fontWeight: '600',
     fontSize: 14,
   },
