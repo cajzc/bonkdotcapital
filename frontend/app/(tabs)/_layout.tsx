@@ -5,7 +5,6 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
         tabBarActiveTintColor: '#f97316', // orange-500
         tabBarInactiveTintColor: '#6b7280', // gray-500
         tabBarStyle: {
@@ -28,13 +27,13 @@ export default function TabLayout() {
         tabBarIconStyle: {
           marginBottom: -2,
         },
-      }}
-    >
+        headerShown: false,
+      }}>
       <Tabs.Screen
         name="feed"
         options={{
           title: 'Feed',
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={22} color={color} />
           ),
         }}
@@ -43,7 +42,7 @@ export default function TabLayout() {
         name="lend"
         options={{
           title: 'Lend',
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons name="add-circle-outline" size={22} color={color} />
           ),
         }}
@@ -52,7 +51,7 @@ export default function TabLayout() {
         name="borrow"
         options={{
           title: 'Borrow',
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons name="search-outline" size={22} color={color} />
           ),
         }}
@@ -61,7 +60,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={22} color={color} />
           ),
         }}
@@ -70,11 +69,11 @@ export default function TabLayout() {
         name="stats"
         options={{
           title: 'Stats',
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons name="bar-chart-outline" size={22} color={color} />
           ),
         }}
       />
     </Tabs>
   );
-}
+} 

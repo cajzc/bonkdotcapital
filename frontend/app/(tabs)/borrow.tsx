@@ -160,7 +160,7 @@ export default function BorrowScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafaf9', // light beige background
+    backgroundColor: '#fef7ed', // slight orange hue background
   },
   header: {
     flexDirection: 'row',
@@ -254,15 +254,15 @@ const styles = StyleSheet.create({
   },
   submitButtonContainer: {
     marginBottom: 20,
-    borderRadius: 12,
+    borderRadius: 20,
     shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   submitButton: {
-    borderRadius: 12,
+    borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
   },

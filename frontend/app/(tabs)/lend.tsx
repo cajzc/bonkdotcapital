@@ -168,7 +168,7 @@ export default function LendScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafaf9', // light beige background
+    backgroundColor: '#fef7ed', // slight orange hue background
   },
   header: {
     flexDirection: 'row',
@@ -278,15 +278,15 @@ const styles = StyleSheet.create({
   },
   createButton: {
     backgroundColor: '#f97316',
-    borderRadius: 12,
+    borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 20,
     shadowColor: '#f97316',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   createButtonText: {
     color: 'white',
@@ -295,14 +295,14 @@ const styles = StyleSheet.create({
   },
   previewCard: {
     backgroundColor: '#f97316',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     marginBottom: 20,
     shadowColor: '#f97316',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   previewHeader: {
     flexDirection: 'row',
@@ -328,6 +328,6 @@ const styles = StyleSheet.create({
   previewValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#10b981', // green
+    color: '#ffffff', // white for better contrast on orange
   },
 });
