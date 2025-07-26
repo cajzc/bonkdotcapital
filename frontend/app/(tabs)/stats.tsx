@@ -184,11 +184,11 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'space-between',
     marginBottom: 24,
   },
   statCard: {
-    width: '47%',
+    width: '48%',
     backgroundColor: 'white',
     borderRadius: 20,
     padding: 20,
@@ -198,6 +198,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 5,
+    marginBottom: 12,
   },
   statIcon: {
     width: 48,
