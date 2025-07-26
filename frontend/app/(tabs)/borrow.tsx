@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface DropdownProps {
@@ -36,9 +36,7 @@ export default function BorrowScreen() {
   const [loanDuration, setLoanDuration] = useState('');
   const [message, setMessage] = useState('');
 
-  const handleBack = () => {
-    router.back();
-  };
+
 
   const handleSubmitRequest = () => {
     // Handle submit borrow request logic
@@ -49,9 +47,6 @@ export default function BorrowScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={24} color="#1f2937" />
-        </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Request BONK Loan</Text>
           <Text style={styles.subtitle}>Offer tokens as collateral</Text>
@@ -169,10 +164,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 20,
   },
-  backButton: {
-    padding: 8,
-    marginRight: 12,
-  },
+
   headerContent: {
     flex: 1,
   },

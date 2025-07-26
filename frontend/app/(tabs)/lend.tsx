@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+
 
 interface DropdownProps {
   placeholder: string;
@@ -36,9 +36,7 @@ export default function LendScreen() {
   const [minReputation, setMinReputation] = useState('');
   const [autoAccept, setAutoAccept] = useState(false);
 
-  const handleBack = () => {
-    router.back();
-  };
+
 
   const handleCreateOffer = () => {
     // Handle create lending offer logic
@@ -49,9 +47,6 @@ export default function LendScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={24} color="#1f2937" />
-        </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Create Lending Offer</Text>
           <Text style={styles.subtitle}>Set your terms and start earning</Text>
@@ -177,10 +172,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 20,
   },
-  backButton: {
-    padding: 8,
-    marginRight: 12,
-  },
+
   headerContent: {
     flex: 1,
   },
