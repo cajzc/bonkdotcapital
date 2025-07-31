@@ -13,10 +13,63 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/placeholder-logo.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "phantom"
+            },
+            {
+              "scheme": "solflare"
+            },
+            {
+              "scheme": "slope"
+            },
+            {
+              "scheme": "exodus"
+            },
+            {
+              "scheme": "trust"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "phantom"
+            },
+            {
+              "scheme": "solflare"
+            },
+            {
+              "scheme": "slope"
+            },
+            {
+              "scheme": "exodus"
+            },
+            {
+              "scheme": "trust"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "package": "com.anonymous.frontend"
     },
     "web": {
       "bundler": "metro",
