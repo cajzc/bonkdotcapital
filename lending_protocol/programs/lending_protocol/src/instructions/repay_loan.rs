@@ -1,5 +1,5 @@
 use crate::{
-    error::Errors,
+    errors::Errors,
     state::{borrower_profile::BorrowerProfile, loan::Loan, loan_offer::LoanOffer},
 };
 use anchor_lang::prelude::*;

@@ -1,10 +1,12 @@
 use anchor_lang::prelude::*;
 
-mod error;
-mod instructions;
-mod state;
-
 declare_id!("EgGEeoSmoZCBZdfyiTCFbPqhSABeFnWhUN6NqiUZEjH4");
+
+pub mod errors;
+pub mod instructions;
+pub mod state;
+
+use instructions::*;
 
 #[program]
 pub mod lending_protocol {
@@ -15,15 +17,15 @@ pub mod lending_protocol {
         Ok(())
     }
 
-    pub fn create_loan(
-        ctx: Context<instructions::create_loan::CreateLoan>,
+    pub fn initialize_create_loan(
+        ctx: Context<CreateLoan>,
         amount: u64,
         interest_rate_bps: u16,
         duration_slots: u64,
         min_score: u64,
         bump: u8,
     ) -> Result<()> {
-        instructions::create_loan::create_loan(
+        create_loan(
             ctx,
             amount,
             interest_rate_bps,
@@ -31,20 +33,6 @@ pub mod lending_protocol {
             min_score,
             bump,
         )
-    }
-
-    pub fn accept_loan(
-        ctx: Context<instructions::accept_loan::AcceptLoan>,
-        bump: u8,
-    ) -> Result<()> {
-        instructions::accept_loan::accept_loan(ctx, bump)
-    }
-
-    pub fn repay_loan(
-        ctx: Context<instructions::repay_loan::RepayLoan>,
-        repayment_amount: u64,
-    ) -> Result<()> {
-        instructions::repay_loan::repay_loan(ctx, repayment_amount)
     }
 }
 

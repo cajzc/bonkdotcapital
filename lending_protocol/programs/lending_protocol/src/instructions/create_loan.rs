@@ -1,4 +1,4 @@
-use crate::{error::Errors, state::loan_offer::LoanOffer};
+use crate::{errors::Errors, state::loan_offer::LoanOffer};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
