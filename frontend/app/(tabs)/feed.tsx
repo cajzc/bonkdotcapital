@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, SemanticColors } from '../../constants';
+import ConnectButton from '@/components/ConnectButton';
 
 interface RequestCardProps {
   userImage: string;
@@ -100,13 +101,7 @@ export default function FeedScreen() {
           <Text style={styles.appSubtitle}>P2P BONK Lending</Text>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color={Colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.connectButton}>
-            <Ionicons name="wallet-outline" size={16} color="white" />
-            <Text style={styles.connectText}>Connect</Text>
-          </TouchableOpacity>
+          <ConnectButton title="Connect" />
         </View>
       </View>
 
