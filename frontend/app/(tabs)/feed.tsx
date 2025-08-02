@@ -12,6 +12,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, SemanticColors } from '../../constants';
 import ConnectButton from '@/components/ConnectButton';
+import { useAuthorization } from '../../lib/AuthorizationProvider';
+import { Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { useState } from 'react';
 
 interface RequestCardProps {
   userImage: string;
@@ -92,6 +95,30 @@ const RequestCard: React.FC<RequestCardProps> = ({
 };
 
 export default function FeedScreen() {
+  const { selectedAccount } = useAuthorization();
+  const [balance, setBalance] = useState<string>('');
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+
+  const getBalance = async () => {
+    if (!selectedAccount) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      setIsLoadingBalance(true);
+      const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+      const balance = await connection.getBalance(selectedAccount.publicKey);
+      const solBalance = balance / LAMPORTS_PER_SOL;
+      setBalance(`${solBalance.toFixed(4)} SOL`);
+    } catch (error) {
+      console.error('Error getting balance:', error);
+      alert('Error getting balance');
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -101,9 +128,25 @@ export default function FeedScreen() {
           <Text style={styles.appSubtitle}>P2P BONK Lending</Text>
         </View>
         <View style={styles.headerRight}>
-          <ConnectButton title="Connect" />
+          <ConnectButton />
+          <TouchableOpacity 
+            style={styles.balanceButton} 
+            onPress={getBalance}
+            disabled={isLoadingBalance}
+          >
+            <Text style={styles.balanceButtonText}>
+              {isLoadingBalance ? 'Loading...' : 'Get Balance'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
+
+      {/* Balance Display */}
+      {balance && (
+        <View style={styles.balanceContainer}>
+          <Text style={styles.balanceText}>Balance: {balance}</Text>
+        </View>
+      )}
 
       {/* Statistics Cards */}
       <View style={styles.statsContainer}>
@@ -419,5 +462,32 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontWeight: '600',
     fontSize: 14,
+  },
+  balanceButton: {
+    backgroundColor: Colors.info,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.lg,
+    marginLeft: Spacing.sm,
+    ...Shadows.sm,
+  },
+  balanceButtonText: {
+    color: Colors.textLight,
+    fontWeight: FontWeight.semibold,
+    fontSize: Typography.xs,
+  },
+  balanceContainer: {
+    backgroundColor: Colors.backgroundWhite,
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    ...Shadows.sm,
+  },
+  balanceText: {
+    fontSize: Typography.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
   },
 }); 
