@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 interface DropdownProps {
@@ -31,6 +32,7 @@ const Dropdown: React.FC<DropdownProps> = ({ placeholder, value, onPress }) => {
 };
 
 export default function LendScreen() {
+  const insets = useSafeAreaInsets();
   const [lendingAmount, setLendingAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('');
   const [minTokenAmount, setMinTokenAmount] = useState('');
@@ -47,7 +49,7 @@ export default function LendScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Create Lending Offer</Text>
           <Text style={styles.subtitle}>Set your terms and start earning</Text>
@@ -170,7 +172,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: 10,
     paddingBottom: Spacing.xl,
   },
 

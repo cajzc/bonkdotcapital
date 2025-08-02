@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface DropdownProps {
   placeholder: string;
@@ -30,6 +31,7 @@ const Dropdown: React.FC<DropdownProps> = ({ placeholder, value, onPress }) => {
 };
 
 export default function BorrowScreen() {
+  const insets = useSafeAreaInsets();
   const [bonkAmount, setBonkAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('');
   const [tokenAmount, setTokenAmount] = useState('');
@@ -46,7 +48,7 @@ export default function BorrowScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Request BONK Loan</Text>
           <Text style={styles.subtitle}>Offer tokens as collateral</Text>
@@ -161,7 +163,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: 10,
     paddingBottom: Spacing.xl,
   },
 

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface StatCardProps {
   icon: string;
@@ -70,10 +71,12 @@ const TokenProgress: React.FC<TokenProgressProps> = ({ token, percentage, color 
 };
 
 export default function StatsScreen() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.title}>Market Insights</Text>
         <Text style={styles.subtitle}>Platform statistics and trends</Text>
       </View>
@@ -165,7 +168,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: Spacing.xl,
-    paddingTop: 10,
     paddingBottom: Spacing.xl,
   },
   title: {

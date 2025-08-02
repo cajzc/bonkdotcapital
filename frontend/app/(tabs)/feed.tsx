@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, SemanticColors } from '../../constants';
 import ConnectButton from '@/components/ConnectButton';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface RequestCardProps {
   userImage: string;
@@ -94,11 +95,12 @@ const RequestCard: React.FC<RequestCardProps> = ({
 
 export default function FeedScreen() {
   const { selectedAccount } = useAuthorization();
+  const insets = useSafeAreaInsets();
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+            {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.appName}>BonkDotCapital</Text>
           <Text style={styles.appSubtitle}>P2P BONK Lending</Text>
@@ -108,9 +110,7 @@ export default function FeedScreen() {
         </View>
       </View>
 
-
-
-      {/* Statistics Cards */}
+       {/* Statistics Cards */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <View style={styles.statIcon}>
@@ -152,8 +152,12 @@ export default function FeedScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Feed Content */}
-      <ScrollView style={styles.feedContainer} showsVerticalScrollIndicator={false}>
+                   {/* Feed Content */}
+      <ScrollView 
+        style={styles.feedContainer} 
+        contentContainerStyle={styles.feedContentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <RequestCard
           userImage="https://via.placeholder.com/40"
           username="bonk_whale_420"
@@ -194,7 +198,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: 10,
     paddingBottom: Spacing.xl,
   },
   headerLeft: {
@@ -297,6 +300,9 @@ const styles = StyleSheet.create({
   feedContainer: {
     flex: 1,
     paddingHorizontal: Spacing.xl,
+  },
+  feedContentContainer: {
+    paddingBottom: 120, 
   },
   requestCard: {
     backgroundColor: Colors.backgroundWhite,
@@ -424,6 +430,5 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontWeight: '600',
     fontSize: 14,
-  },
-
-}); 
+     },
+ });  

@@ -9,10 +9,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TabType = 'loans' | 'requests' | 'messages';
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabType>('loans');
 
   const renderTabContent = () => {
@@ -81,7 +83,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.profileInfo}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>YU</Text>
@@ -148,7 +150,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: 10,
     paddingBottom: Spacing.xl,
   },
   profileInfo: {
