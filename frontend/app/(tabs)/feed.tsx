@@ -316,10 +316,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.md,
+    gap: Spacing.sm,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: Spacing.sm,
+    maxWidth: '70%',
   },
   userImage: {
     width: 40,
@@ -329,12 +333,14 @@ const styles = StyleSheet.create({
   },
   userDetails: {
     flex: 1,
+    minWidth: 0,
   },
   username: {
     fontSize: Typography.base,
     fontWeight: FontWeight.semibold,
     color: Colors.textPrimary,
     marginBottom: 2,
+    flexShrink: 1,
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -346,9 +352,13 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   typeTag: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    flexShrink: 0,
+    minWidth: 60,
+    maxWidth: 80,
   },
   lendingTag: {
     backgroundColor: SemanticColors.lending.background,
@@ -359,6 +369,8 @@ const styles = StyleSheet.create({
   typeText: {
     fontSize: Typography.xs,
     fontWeight: FontWeight.semibold,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   lendingText: {
     color: SemanticColors.lending.text,
