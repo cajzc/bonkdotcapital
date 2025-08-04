@@ -22,4 +22,6 @@ pub enum Errors {
     InsufficientRepayment,
     #[msg("Loan repayment overdue it got liquidated")]
     LoanRepaymentOverdue,
+    #[msg("Math overflow occurred")]
+    MathOverflow,
 }

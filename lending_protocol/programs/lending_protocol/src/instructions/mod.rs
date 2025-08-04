@@ -1,3 +1,5 @@
-pub mod create_loan;
+pub mod flash_loan;
+pub mod loan;
 
-pub use create_loan::*;
+pub use flash_loan::*;
+pub use loan::*;

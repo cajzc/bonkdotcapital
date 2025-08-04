@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("EgGEeoSmoZCBZdfyiTCFbPqhSABeFnWhUN6NqiUZEjH4");
+declare_id!("ABwKxzDC6curXT297iNKy4XGvZTiN3NeCVsWAZxJfMGi");
 
 pub mod errors;
 pub mod instructions;
@@ -33,6 +33,14 @@ pub mod lending_protocol {
             min_score,
             bump,
         )
+    }
+
+    pub fn intialize_accept_loan(ctx: Context<AcceptLoan>, bump: u8) -> Result<()> {
+        accept_loan(ctx, bump)
+    }
+
+    pub fn initialize_pay_loan(ctx: Context<PayLoan>) -> Result<()> {
+        pay_loan(ctx)
     }
 }
 
