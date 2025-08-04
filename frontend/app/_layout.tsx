@@ -9,6 +9,14 @@ if (typeof global.structuredClone === 'undefined') {
   global.structuredClone = structuredClonePolyfill.default || structuredClonePolyfill;
 }
 
+// Polyfill for Buffer (required for Solana PDAs)
+if (typeof global.Buffer === 'undefined') {
+  const bufferPolyfill = require('buffer');
+  global.Buffer = bufferPolyfill.Buffer;
+  global.process = global.process || {};
+  global.process.env = global.process.env || {};
+}
+
 
 export default function RootLayout() {
   return (

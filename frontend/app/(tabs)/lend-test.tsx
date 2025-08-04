@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,50 +13,26 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius } from '../../constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSolanaProgram } from '../../lib/Solana';
-import { useAuthorization } from '../../lib/AuthorizationProvider';
-import { getUserTokenAccounts, TokenInfo, getTokenSymbol, createMockTokens } from '../../lib/tokenUtils';
 
-export default function LendScreen() {
+interface MockToken {
+  symbol: string;
+  balance: number;
+  mint: string;
+}
+
+export default function LendTestScreen() {
   const insets = useSafeAreaInsets();
-  const { selectedAccount } = useAuthorization();
-  const { connection } = useSolanaProgram();
   const [lendingAmount, setLendingAmount] = useState('');
-  const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
+  const [selectedToken, setSelectedToken] = useState<MockToken | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userTokens, setUserTokens] = useState<TokenInfo[]>([]);
-  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
 
-  useEffect(() => {
-    if (connection && selectedAccount?.publicKey) {
-      loadUserTokens();
-    }
-  }, [connection, selectedAccount]);
-
-  const loadUserTokens = async () => {
-    if (!connection || !selectedAccount?.publicKey) return;
-    
-    setIsLoadingTokens(true);
-    try {
-      const tokens = await getUserTokenAccounts(connection, selectedAccount.publicKey);
-      
-      if (tokens.length === 0) {
-        console.log('No real tokens found, using mock tokens for testing');
-        const mockTokens = createMockTokens(selectedAccount.publicKey);
-        setUserTokens(mockTokens);
-      } else {
-        setUserTokens(tokens);
-      }
-    } catch (error) {
-      console.error('Error loading user tokens:', error);
-      Alert.alert('Error', 'Failed to load your tokens. Using mock tokens for testing.');
-      const mockTokens = createMockTokens(selectedAccount.publicKey);
-      setUserTokens(mockTokens);
-    } finally {
-      setIsLoadingTokens(false);
-    }
-  };
+  // Mock tokens for testing
+  const mockTokens: MockToken[] = [
+    { symbol: 'BONK', balance: 1000000, mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263' },
+    { symbol: 'USDC', balance: 1000, mint: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU' },
+    { symbol: 'SOL', balance: 50, mint: 'So11111111111111111111111111111111111111112' },
+  ];
 
   const handleCreateOffer = async () => {
     if (!lendingAmount) {
@@ -73,7 +49,7 @@ export default function LendScreen() {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      Alert.alert('Success', `Loan offer created for ${getTokenSymbol(selectedToken.mint.toString())}! (Demo mode)`);
+      Alert.alert('Success', `Loan offer created for ${selectedToken.symbol}! (Demo mode)`);
     } catch (error) {
       Alert.alert('Error', 'Failed to create loan offer');
     } finally {
@@ -97,42 +73,28 @@ export default function LendScreen() {
             </TouchableOpacity>
           </View>
           
-          {isLoadingTokens ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading your tokens...</Text>
-            </View>
-          ) : userTokens.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No tokens found in your wallet</Text>
-              <Text style={styles.emptyText}>Using demo tokens for testing</Text>
-              <TouchableOpacity style={styles.refreshButton} onPress={loadUserTokens}>
-                <Text style={styles.refreshButtonText}>Refresh</Text>
+          <ScrollView style={styles.tokenList}>
+            {mockTokens.map((token, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.tokenItem}
+                onPress={() => {
+                  setSelectedToken(token);
+                  setShowTokenModal(false);
+                }}
+              >
+                <View style={styles.tokenInfo}>
+                  <Text style={styles.tokenSymbol}>
+                    {token.symbol}
+                  </Text>
+                  <Text style={styles.tokenBalance}>
+                    Balance: {token.balance.toLocaleString()}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
               </TouchableOpacity>
-            </View>
-          ) : (
-            <ScrollView style={styles.tokenList}>
-              {userTokens.map((token, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.tokenItem}
-                  onPress={() => {
-                    setSelectedToken(token);
-                    setShowTokenModal(false);
-                  }}
-                >
-                  <View style={styles.tokenInfo}>
-                    <Text style={styles.tokenSymbol}>
-                      {getTokenSymbol(token.mint.toString())}
-                    </Text>
-                    <Text style={styles.tokenBalance}>
-                      Balance: {token.balance.toLocaleString()}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
+            ))}
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -153,7 +115,7 @@ export default function LendScreen() {
           
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              Lending Amount {selectedToken ? `(${getTokenSymbol(selectedToken.mint.toString())})` : ''}
+              Lending Amount {selectedToken ? `(${selectedToken.symbol})` : ''}
             </Text>
             <TextInput
               style={styles.textInput}
@@ -177,7 +139,7 @@ export default function LendScreen() {
                 selectedToken ? styles.dropdownTextFilled : styles.dropdownTextPlaceholder
               ]}>
                 {selectedToken 
-                  ? `${getTokenSymbol(selectedToken.mint.toString())} (${selectedToken.balance.toLocaleString()})`
+                  ? `${selectedToken.symbol} (${selectedToken.balance.toLocaleString()})`
                   : 'Select token from your wallet'
                 }
               </Text>
@@ -362,34 +324,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.lg,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: Spacing.xl,
-  },
-  loadingText: {
-    fontSize: Typography.base,
-    color: Colors.textSecondary,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: Spacing.xl,
-  },
-  emptyText: {
-    fontSize: Typography.base,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.md,
-  },
-  refreshButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-  },
-  refreshButtonText: {
-    color: Colors.textLight,
-    fontSize: Typography.base,
-    fontWeight: FontWeight.semibold,
   },
   tokenList: {
     maxHeight: 300,

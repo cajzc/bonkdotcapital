@@ -60,7 +60,7 @@ export function useSolanaProgram() {
   const program = useMemo(() => {
     if (!provider) return null;
     try {
-      setProvider(provider);
+setProvider(provider);
       return new Program(idl as any, provider);
     } catch (error) {
       console.error('Error initializing Solana program:', error);
@@ -69,7 +69,7 @@ export function useSolanaProgram() {
   }, [provider]);
 
   return {
-    connection,
+  connection,
     wallet,
     program
   };

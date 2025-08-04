@@ -40,7 +40,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="lend"
+        name="lend-test"
         options={{
           title: 'Lend',
           tabBarIcon: ({ color, size }) => (
