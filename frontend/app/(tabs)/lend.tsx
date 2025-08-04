@@ -8,10 +8,16 @@ import {
   Switch,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PublicKey } from '@solana/web3.js';
+import { BN } from '@coral-xyz/anchor';
+import { useSolanaProgram } from '../../lib/Solana';
+import { useAuthorization } from '../../lib/AuthorizationProvider';
+import { Buffer } from 'buffer';
 
 
 interface DropdownProps {
@@ -33,17 +39,92 @@ const Dropdown: React.FC<DropdownProps> = ({ placeholder, value, onPress }) => {
 
 export default function LendScreen() {
   const insets = useSafeAreaInsets();
+  const { selectedAccount } = useAuthorization();
+  const { connection, wallet, program } = useSolanaProgram();
   const [lendingAmount, setLendingAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('');
   const [minTokenAmount, setMinTokenAmount] = useState('');
   const [minReputation, setMinReputation] = useState('');
   const [autoAccept, setAutoAccept] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handleCreateOffer = async () => {
+    if (!connection || !wallet || !program) {
+      Alert.alert('Error', 'Solana connection or program not available. Please try again.');
+      return;
+    }
 
+    if (!selectedAccount?.publicKey) {
+      Alert.alert('Error', 'Please connect your wallet first');
+      return;
+    }
 
-  const handleCreateOffer = () => {
-    // Handle create lending offer logic
-    console.log('Creating lending offer...');
+    if (!lendingAmount || !selectedToken || !minTokenAmount) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Convert amounts to proper format (assuming BONK has 5 decimals)
+      const amount = Math.floor(parseFloat(lendingAmount) * 100000); // Convert to lamports
+      const minScore = parseInt(minReputation) || 0;
+      const interestRateBps = 500; // 5% interest rate (500 basis points)
+      const durationSlots = 86400; // 1 day in slots (assuming 1 slot = 1 second)
+      const bump = 0; // Will be calculated by the program
+
+      // For now, use a placeholder token mint (you'll need to replace with actual token mints)
+      const tokenMint = new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'); // BONK token mint
+
+      // Find PDA for loan offer
+      const [loanOfferPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('loan_offer'),
+          selectedAccount.publicKey.toBuffer(),
+          tokenMint.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find PDA for vault
+      const [vaultPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('vault'),
+          loanOfferPda.toBuffer(),
+        ],
+        program.programId
+      );
+
+      const txSignature = await program.methods
+        .initializeCreateLoan(
+          new BN(amount),
+          new BN(interestRateBps),
+          new BN(durationSlots),
+          new BN(minScore),
+          bump
+        )
+        .accounts({
+          loanOffer: loanOfferPda,
+          vault: vaultPda,
+          lender: selectedAccount.publicKey,
+          lenderTokenAccount: selectedAccount.publicKey, // You'll need the actual token account
+          tokenMint: tokenMint,
+          tokenProgram: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+          systemProgram: new PublicKey('11111111111111111111111111111111'),
+          rent: new PublicKey('SysvarRent111111111111111111111111111111111'),
+        })
+        .rpc();
+
+      Alert.alert('Success', `Loan offer created! Signature: ${txSignature}`);
+      console.log('Loan offer created!', txSignature);
+
+    } catch (error: unknown) {
+      console.error('Error creating loan offer:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Error', `Failed to create loan offer: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -81,8 +162,8 @@ export default function LendScreen() {
               placeholder="Select token"
               value={selectedToken}
               onPress={() => {
-                // Handle token selection
-                console.log('Select token');
+                // For now, set a default token
+                setSelectedToken('BONK');
               }}
             />
           </View>
@@ -107,8 +188,8 @@ export default function LendScreen() {
               placeholder="Select minimum"
               value={minReputation}
               onPress={() => {
-                // Handle reputation selection
-                console.log('Select reputation');
+                // For now, set a default reputation score
+                setMinReputation('4.0');
               }}
             />
           </View>
@@ -132,8 +213,14 @@ export default function LendScreen() {
         </View>
 
         {/* Create Button */}
-        <TouchableOpacity style={styles.createButton} onPress={handleCreateOffer}>
-          <Text style={styles.createButtonText}>Create Lending Offer</Text>
+        <TouchableOpacity 
+          style={[styles.createButton, isSubmitting && styles.createButtonDisabled]} 
+          onPress={handleCreateOffer}
+          disabled={isSubmitting}
+        >
+          <Text style={styles.createButtonText}>
+            {isSubmitting ? 'Creating...' : 'Create Lending Offer'}
+          </Text>
         </TouchableOpacity>
 
         {/* Matching Preview */}
@@ -278,6 +365,9 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontSize: Typography.lg,
     fontWeight: FontWeight.semibold,
+  },
+  createButtonDisabled: {
+    opacity: 0.6,
   },
   previewCard: {
     backgroundColor: Colors.primary,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,16 @@ import {
   TextInput,
   Image,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, SemanticColors } from '../../constants';
 import ConnectButton from '@/components/ConnectButton';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PublicKey } from '@solana/web3.js';
+import { useSolanaProgram } from '../../lib/Solana';
+import { Buffer } from 'buffer';
 
 interface RequestCardProps {
   userImage: string;
@@ -41,6 +45,73 @@ const RequestCard: React.FC<RequestCardProps> = ({
   comments,
 }) => {
   const isLending = type === 'Lending';
+  const { selectedAccount } = useAuthorization();
+  const { connection, wallet, program } = useSolanaProgram();
+  const [isPaying, setIsPaying] = useState(false);
+
+  const handlePayLoan = async () => {
+    if (!connection || !wallet || !program) {
+      Alert.alert('Error', 'Solana connection or program not available. Please try again.');
+      return;
+    }
+
+    if (!selectedAccount?.publicKey) {
+      Alert.alert('Error', 'Please connect your wallet first');
+      return;
+    }
+
+    setIsPaying(true);
+    try {
+      // For demo purposes, we'll use placeholder values
+      // In a real app, you'd get these from the selected loan
+      const tokenMint = new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'); // BONK token mint
+      const lenderPublicKey = new PublicKey('11111111111111111111111111111111'); // Placeholder lender
+
+      // Find PDA for loan offer
+      const [loanOfferPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('loan_offer'),
+          lenderPublicKey.toBuffer(),
+          tokenMint.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find PDA for loan
+      const [loanPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('loan'),
+          loanOfferPda.toBuffer(),
+          selectedAccount.publicKey.toBuffer(),
+        ],
+        program.programId
+      );
+
+      const txSignature = await program.methods
+        .initializePayLoan()
+        .accounts({
+          loan: loanPda,
+          loanOffer: loanOfferPda,
+          borrowerTokenAccount: selectedAccount.publicKey, // You'll need the actual token account
+          lenderTokenAccount: lenderPublicKey, // You'll need the actual lender token account
+          borrower: selectedAccount.publicKey,
+          tokenMint: tokenMint,
+          tokenProgram: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+          clock: new PublicKey('SysvarC1ock11111111111111111111111111111111'),
+        })
+        .rpc();
+
+      Alert.alert('Success', `Loan paid! Signature: ${txSignature}`);
+      console.log('Loan paid!', txSignature);
+
+    } catch (error: unknown) {
+      console.error('Error paying loan:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Error', `Failed to pay loan: ${errorMessage}`);
+    } finally {
+      setIsPaying(false);
+    }
+  };
   
   return (
     <View style={styles.requestCard}>
@@ -85,9 +156,22 @@ const RequestCard: React.FC<RequestCardProps> = ({
           <Ionicons name="chatbubble-outline" size={16} color={Colors.textSecondary} />
           <Text style={styles.commentsCount}>{comments}</Text>
         </View>
-        <TouchableOpacity style={styles.viewDetailsButton}>
-          <Text style={styles.viewDetailsText}>View Details</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          {!isLending && (
+            <TouchableOpacity 
+              style={[styles.payLoanButton, isPaying && styles.payLoanButtonDisabled]}
+              onPress={handlePayLoan}
+              disabled={isPaying}
+            >
+              <Text style={styles.payLoanButtonText}>
+                {isPaying ? 'Paying...' : 'Pay Loan'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.viewDetailsButton}>
+            <Text style={styles.viewDetailsText}>View Details</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -442,5 +526,25 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontWeight: '600',
     fontSize: 14,
-     },
- });  
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  payLoanButton: {
+    backgroundColor: Colors.success,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    ...Shadows.primary,
+  },
+  payLoanButtonDisabled: {
+    opacity: 0.6,
+  },
+  payLoanButtonText: {
+    color: Colors.textLight,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+});  

@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PublicKey } from '@solana/web3.js';
 import { useSolanaProgram } from '../../lib/Solana';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
+import { Buffer } from 'buffer';
 
 interface DropdownProps {
   placeholder: string;
@@ -56,20 +57,71 @@ export default function BorrowScreen() {
       return;
     }
 
+    if (!bonkAmount || !selectedToken || !tokenAmount) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Call your Anchor program's initialize instruction
+      // For demo purposes, we'll use placeholder values
+      // In a real app, you'd get these from the selected loan offer
+      const tokenMint = new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'); // BONK token mint
+      const lenderPublicKey = new PublicKey('11111111111111111111111111111111'); // Placeholder lender
+      const bump = 0; // Will be calculated by the program
+
+      // Find PDA for loan offer (you'd get this from the selected offer)
+      const [loanOfferPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('loan_offer'),
+          lenderPublicKey.toBuffer(),
+          tokenMint.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find PDA for loan
+      const [loanPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('loan'),
+          loanOfferPda.toBuffer(),
+          selectedAccount.publicKey.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find PDA for vault
+      const [vaultPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('vault'),
+          loanOfferPda.toBuffer(),
+        ],
+        program.programId
+      );
+
       const txSignature = await program.methods
-        .initialize()
+        .intializeAcceptLoan(bump)
+        .accounts({
+          loanOffer: loanOfferPda,
+          loan: loanPda,
+          borrowerTokenAccount: selectedAccount.publicKey, // You'll need the actual token account
+          vault: vaultPda,
+          borrower: selectedAccount.publicKey,
+          tokenMint: tokenMint,
+          tokenProgram: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+          systemProgram: new PublicKey('11111111111111111111111111111111'),
+          rent: new PublicKey('SysvarRent111111111111111111111111111111111'),
+          clock: new PublicKey('SysvarC1ock11111111111111111111111111111111'),
+        })
         .rpc();
 
-      Alert.alert('Success', `Program instruction executed! Signature: ${txSignature}`);
-      console.log('Program instruction executed!', txSignature);
+      Alert.alert('Success', `Loan accepted! Signature: ${txSignature}`);
+      console.log('Loan accepted!', txSignature);
 
     } catch (error: unknown) {
-      console.error('Error submitting borrow request:', error);
+      console.error('Error accepting loan:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      Alert.alert('Error', `Failed to submit request: ${errorMessage}`);
+      Alert.alert('Error', `Failed to accept loan: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -110,8 +162,8 @@ export default function BorrowScreen() {
               placeholder="Select token"
               value={selectedToken}
               onPress={() => {
-                // Handle token selection
-                console.log('Select token');
+                // For now, set a default token
+                setSelectedToken('BONK');
               }}
             />
           </View>
@@ -136,8 +188,8 @@ export default function BorrowScreen() {
               placeholder="Select duration"
               value={loanDuration}
               onPress={() => {
-                // Handle duration selection
-                console.log('Select duration');
+                // For now, set a default duration
+                setLoanDuration('30 days');
               }}
             />
           </View>
