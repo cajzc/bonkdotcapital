@@ -34,6 +34,13 @@ func SetupRoutes(router *gin.Engine, app *handlers.AppContext) {
 			offers.GET("/:offerId/comments", app.GetCommentsHandler)
 		}
 
+		// Routes for loan requests
+		requests := api.Group("/requests")
+		{
+			// route for getting list of all loan requests
+			requests.GET("/", app.GetRequestsHandler)
+		}
+
 		// Routes for user-specific data
 		users := api.Group("/users")
 		{
