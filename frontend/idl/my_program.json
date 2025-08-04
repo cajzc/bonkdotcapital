@@ -1,0 +1,416 @@
+{
+  "address": "ByQsXHTCZSfGwkax7mkHGEj88SPZycKZeJ2ryLYtUBjP",
+  "metadata": {
+    "name": "my_program",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "emit_event",
+      "discriminator": [
+        82,
+        133,
+        188,
+        136,
+        167,
+        139,
+        209,
+        52
+      ],
+      "accounts": [
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "example_cpi",
+      "discriminator": [
+        207,
+        108,
+        176,
+        156,
+        158,
+        22,
+        220,
+        118
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "counter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "example_program",
+          "address": "8HupNBr7SBhBLcBsLhbtes3tCarBm6Bvpqp5AfVjHuj8"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "increment_score",
+      "discriminator": [
+        3,
+        250,
+        220,
+        149,
+        46,
+        232,
+        135,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "score",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  99,
+                  111,
+                  114,
+                  101,
+                  118,
+                  50
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_new_account",
+      "discriminator": [
+        120,
+        204,
+        199,
+        219,
+        44,
+        83,
+        145,
+        253
+      ],
+      "accounts": [
+        {
+          "name": "new_account",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "return_pda",
+      "discriminator": [
+        219,
+        97,
+        50,
+        237,
+        147,
+        175,
+        88,
+        63
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "signer": true
+        },
+        {
+          "name": "pda_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  101,
+                  108,
+                  108,
+                  111,
+                  95,
+                  119,
+                  111,
+                  114,
+                  108,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "sol_transfer",
+      "discriminator": [
+        135,
+        254,
+        247,
+        202,
+        217,
+        48,
+        184,
+        165
+      ],
+      "accounts": [
+        {
+          "name": "sender",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "recipient",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "NewAccount",
+      "discriminator": [
+        176,
+        95,
+        4,
+        118,
+        91,
+        177,
+        125,
+        232
+      ]
+    },
+    {
+      "name": "ScoreAccount",
+      "discriminator": [
+        97,
+        121,
+        23,
+        147,
+        120,
+        45,
+        149,
+        84
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "ExampleEvent",
+      "discriminator": [
+        106,
+        216,
+        53,
+        133,
+        46,
+        98,
+        236,
+        159
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "ExampleEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "message",
+            "type": "string"
+          },
+          {
+            "name": "value",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NewAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScoreAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "score",
+            "type": "u128"
+          },
+          {
+            "name": "loans",
+            "type": "u64"
+          },
+          {
+            "name": "borrows",
+            "type": "u64"
+          },
+          {
+            "name": "active_loans",
+            "type": "u64"
+          },
+          {
+            "name": "active_borrows",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u64",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
