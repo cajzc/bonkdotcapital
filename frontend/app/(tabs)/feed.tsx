@@ -442,35 +442,5 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontWeight: '600',
     fontSize: 14,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  loadingText: {
-    fontSize: Typography.base,
-    color: Colors.textSecondary,
-    marginTop: Spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xxl,
-    marginTop: 60,
-  },
-  emptyTitle: {
-    fontSize: Typography.lg,
-    fontWeight: FontWeight.semibold,
-    color: Colors.textPrimary,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  emptySubtitle: {
-    fontSize: Typography.base,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-});
+     },
+ });  
