@@ -7,11 +7,16 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
+import { Buffer } from 'buffer';
+import { useSolanaProgram } from '../../lib/Solana';
+import { useAuthorization } from '../../lib/AuthorizationProvider';
 
 interface DropdownProps {
   placeholder: string;
@@ -32,17 +37,62 @@ const Dropdown: React.FC<DropdownProps> = ({ placeholder, value, onPress }) => {
 
 export default function BorrowScreen() {
   const insets = useSafeAreaInsets();
+  const { selectedAccount } = useAuthorization();
+  const { connection, wallet } = useSolanaProgram();
   const [bonkAmount, setBonkAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('');
   const [tokenAmount, setTokenAmount] = useState('');
   const [loanDuration, setLoanDuration] = useState('');
   const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handleSubmitRequest = async () => {
+    if (!connection || !wallet) {
+      Alert.alert('Error', 'Solana connection not available. Please try again.');
+      return;
+    }
 
+    if (!selectedAccount?.publicKey) {
+      Alert.alert('Error', 'Please connect your wallet first');
+      return;
+    }
 
-  const handleSubmitRequest = () => {
-    // Handle submit borrow request logic
-    console.log('Submitting borrow request...');
+    setIsSubmitting(true);
+    try {
+      // Get the latest blockhash
+      const { blockhash } = await connection.getLatestBlockhash();
+      
+      // Create a simple transfer transaction as a test
+      const transaction = new Transaction().add(
+        // Add a simple transfer instruction as a test
+        // You can replace this with your actual program instruction later
+        SystemProgram.transfer({
+          fromPubkey: selectedAccount.publicKey,
+          toPubkey: new PublicKey('11111111111111111111111111111111'), // System program
+          lamports: 1000, // Small amount for testing
+        })
+      );
+      
+      // Set the recent blockhash
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = selectedAccount.publicKey;
+
+      // Sign and send the transaction
+      const signedTx = await wallet.signTransaction(transaction);
+      const signature = await connection.sendRawTransaction(signedTx.serialize());
+      
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, 'confirmed');
+
+      Alert.alert('Success', `Transaction successful! Signature: ${signature}`);
+      console.log('Transaction signature:', signature);
+    } catch (error: unknown) {
+      console.error('Error submitting borrow request:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Error', `Failed to submit request: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -129,14 +179,20 @@ export default function BorrowScreen() {
         </View>
 
         {/* Submit Button */}
-        <TouchableOpacity style={styles.submitButtonContainer} onPress={handleSubmitRequest}>
+        <TouchableOpacity 
+          style={[styles.submitButtonContainer, isSubmitting && styles.submitButtonDisabled]} 
+          onPress={handleSubmitRequest}
+          disabled={isSubmitting}
+        >
           <LinearGradient
             colors={[Colors.info, Colors.purple]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.submitButton}
           >
-            <Text style={styles.submitButtonText}>Submit Borrow Request</Text>
+            <Text style={styles.submitButtonText}>
+              {isSubmitting ? 'Submitting...' : 'Submit Borrow Request'}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
 
@@ -283,5 +339,8 @@ const styles = StyleSheet.create({
   apyDescription: {
     fontSize: Typography.sm,
     color: Colors.textSecondary,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
 });

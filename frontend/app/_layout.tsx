@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { AuthorizationProvider } from '../lib/AuthorizationProvider';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
