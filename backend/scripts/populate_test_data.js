@@ -126,18 +126,6 @@ const testRequests = [
     duration: 60,
     is_active: true,
     created_at: new Date()
-  },
-  {
-    request_address: 'request_test_3_' + Date.now(),
-    borrower_address: 'DRiP2Pn2K6fuMLKQmt5rZWxa4eUkbvnDv7hk6v4n5EQW',
-    amount: 45000000,
-    max_apy: 14.5,
-    token: 'BONK',
-    collateral_token: 'JUP',
-    collateral_amount: 2250,
-    duration: 45,
-    is_active: true,
-    created_at: new Date()
   }
 ];
 

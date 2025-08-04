@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,77 +8,50 @@ import {
   TextInput,
   Image,
   SafeAreaView,
-  ActivityIndicator,
-  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, SemanticColors } from '../../constants';
 import ConnectButton from '@/components/ConnectButton';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiClient } from '../../lib/apiClient';
-import { wsClient } from '../../lib/websocketClient';
-import type { LoanOffer, LoanRequest, PlatformStats, WebSocketMessage } from '../../types/backend';
 
 interface RequestCardProps {
-  offer?: LoanOffer;
-  request?: LoanRequest;
+  userImage: string;
+  username: string;
+  rating: number;
   type: 'Lending' | 'Borrowing';
-  onViewDetails?: () => void;
+  amount: string;
+  collateral: string;
+  apy: string;
+  duration: string;
+  description: string;
+  comments: number;
 }
 
-// Helper functions
-const formatNumber = (num: number): string => {
-  if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
-  if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-  return num.toString();
-};
-
-const shortenAddress = (address: string): string => {
-  if (!address) return 'Unknown';
-  return `${address.slice(0, 4)}...${address.slice(-4)}`;
-};
-
-const formatDuration = (days: number): string => {
-  if (days >= 365) return `${Math.floor(days / 365)} year${days >= 730 ? 's' : ''}`;
-  if (days >= 30) return `${Math.floor(days / 30)} month${days >= 60 ? 's' : ''}`;
-  return `${days} day${days !== 1 ? 's' : ''}`;
-};
-
 const RequestCard: React.FC<RequestCardProps> = ({
-  offer,
-  request,
+  userImage,
+  username,
+  rating,
   type,
-  onViewDetails,
+  amount,
+  collateral,
+  apy,
+  duration,
+  description,
+  comments,
 }) => {
   const isLending = type === 'Lending';
-  const data = isLending ? offer : request;
-  
-  if (!data) return null;
-  
-  // Extract data based on type
-  const username = isLending ? shortenAddress(offer!.lender_address) : shortenAddress(request!.borrower_address);
-  const amount = `${formatNumber(data.amount)} BONK`;
-  const collateral = isLending ? offer!.token : `${formatNumber(request!.collateral_amount)} ${request!.collateral_token}`;
-  const apy = isLending ? offer!.apy.toFixed(1) : request!.max_apy.toFixed(1);
-  const duration = formatDuration(data.duration);
-  const description = isLending 
-    ? `${offer!.is_active ? 'Active' : 'Inactive'} lending offer • Collateral: ${offer!.token}`
-    : `${request!.is_active ? 'Active' : 'Inactive'} borrowing request • Collateral: ${request!.collateral_token}`;
   
   return (
     <View style={styles.requestCard}>
       <View style={styles.requestHeader}>
         <View style={styles.userInfo}>
-          <View style={styles.userAvatar}>
-            <Ionicons name="person" size={20} color={Colors.textSecondary} />
-          </View>
+          <Image source={{ uri: userImage }} style={styles.userImage} />
           <View style={styles.userDetails}>
             <Text style={styles.username}>{username}</Text>
             <View style={styles.ratingContainer}>
-              <Ionicons name="shield-checkmark" size={14} color={Colors.success} />
-              <Text style={styles.rating}>Verified</Text>
+              <Ionicons name="star" size={14} color={Colors.warning} />
+              <Text style={styles.rating}>{rating}</Text>
             </View>
           </View>
         </View>
@@ -100,7 +73,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
           <Text style={styles.collateral}>{collateral}</Text>
         </View>
         <View style={styles.apyRow}>
-          <Text style={styles.apy}>{apy}% APY</Text>
+          <Text style={styles.apy}>{apy} APY</Text>
           <Text style={styles.duration}>{duration}</Text>
         </View>
       </View>
@@ -110,9 +83,9 @@ const RequestCard: React.FC<RequestCardProps> = ({
       <View style={styles.cardFooter}>
         <View style={styles.commentsContainer}>
           <Ionicons name="chatbubble-outline" size={16} color={Colors.textSecondary} />
-          <Text style={styles.commentsCount}>0</Text>
+          <Text style={styles.commentsCount}>{comments}</Text>
         </View>
-        <TouchableOpacity style={styles.viewDetailsButton} onPress={onViewDetails}>
+        <TouchableOpacity style={styles.viewDetailsButton}>
           <Text style={styles.viewDetailsText}>View Details</Text>
         </TouchableOpacity>
       </View>
@@ -123,104 +96,6 @@ const RequestCard: React.FC<RequestCardProps> = ({
 export default function FeedScreen() {
   const { selectedAccount } = useAuthorization();
   const insets = useSafeAreaInsets();
-  
-  const [offers, setOffers] = useState<LoanOffer[]>([]);
-  const [requests, setRequests] = useState<LoanRequest[]>([]);
-  const [stats, setStats] = useState<PlatformStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const fetchData = async () => {
-    try {
-      const [offersData, requestsData, statsData] = await Promise.all([
-        apiClient.getLoanOffers(),
-        apiClient.getLoanRequests(),
-        apiClient.getPlatformStats()
-      ]);
-      
-      setOffers(offersData || []);
-      setRequests(requestsData || []);
-      setStats(statsData);
-    } catch (error) {
-      console.error('Error fetching feed data:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-
-    // Try to subscribe to WebSocket updates, but don't fail if it doesn't work
-    let unsubscribe: (() => void) | null = null;
-    
-    try {
-      unsubscribe = wsClient.subscribe('offers', (message: WebSocketMessage) => {
-        console.log('WebSocket message received:', message);
-        
-        if (message.type === 'offer_created') {
-          setOffers(prevOffers => [message.data, ...prevOffers]);
-          fetchStats();
-        }
-      });
-    } catch (error) {
-      console.log('WebSocket connection failed, will rely on manual refresh:', error);
-    }
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, []);
-
-  const fetchStats = async () => {
-    try {
-      const statsData = await apiClient.getPlatformStats();
-      setStats(statsData);
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
-  };
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchData();
-  };
-
-  const handleViewDetails = (type: 'offer' | 'request', id: string) => {
-    console.log(`View details for ${type}:`, id);
-  };
-
-  // Combine offers and requests for display
-  const allItems = [
-    ...offers.map(offer => ({ type: 'offer' as const, data: offer })),
-    ...requests.map(request => ({ type: 'request' as const, data: request }))
-  ];
-
-  const filteredItems = allItems.filter(item => {
-    const searchTerm = searchQuery.toLowerCase();
-    if (item.type === 'offer') {
-      return item.data.lender_address.toLowerCase().includes(searchTerm) ||
-             item.data.token.toLowerCase().includes(searchTerm);
-    } else {
-      return item.data.borrower_address.toLowerCase().includes(searchTerm) ||
-             item.data.collateral_token.toLowerCase().includes(searchTerm);
-    }
-  });
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading offers and requests...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -242,7 +117,7 @@ export default function FeedScreen() {
             <View style={styles.activeDot} />
           </View>
           <Text style={styles.statLabel}>Active</Text>
-          <Text style={styles.statValue}>{stats?.active_loans_count || 0}</Text>
+          <Text style={styles.statValue}>247</Text>
         </View>
         
         <View style={styles.statCard}>
@@ -250,7 +125,7 @@ export default function FeedScreen() {
             <Ionicons name="trending-up" size={20} color={Colors.success} />
           </View>
           <Text style={styles.statLabel}>Avg APY</Text>
-          <Text style={styles.statValue}>{stats?.average_apy ? `${stats.average_apy.toFixed(1)}%` : '0%'}</Text>
+          <Text style={styles.statValue}>12.8%</Text>
         </View>
         
         <View style={styles.statCard}>
@@ -258,7 +133,7 @@ export default function FeedScreen() {
             <Ionicons name="link" size={20} color={Colors.primary} />
           </View>
           <Text style={styles.statLabel}>Volume</Text>
-          <Text style={styles.statValue}>{stats?.total_volume ? formatNumber(stats.total_volume) : '0'}</Text>
+          <Text style={styles.statValue}>2.4B</Text>
         </View>
       </View>
 
@@ -268,10 +143,8 @@ export default function FeedScreen() {
           <Ionicons name="search" size={20} color={Colors.textTertiary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search offers and requests..."
+            placeholder="Search requests..."
             placeholderTextColor={Colors.textTertiary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
           />
         </View>
         <TouchableOpacity style={styles.filterButton}>
@@ -284,29 +157,32 @@ export default function FeedScreen() {
         style={styles.feedContainer} 
         contentContainerStyle={styles.feedContentContainer}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
       >
-        {filteredItems.length > 0 ? (
-          filteredItems.map((item, index) => (
-            <RequestCard
-              key={`${item.type}-${item.data.id || index}`}
-              offer={item.type === 'offer' ? item.data as LoanOffer : undefined}
-              request={item.type === 'request' ? item.data as LoanRequest : undefined}
-              type={item.type === 'offer' ? 'Lending' : 'Borrowing'}
-              onViewDetails={() => handleViewDetails(item.type, item.data.id || '')}
-            />
-          ))
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="document-outline" size={48} color={Colors.textTertiary} />
-            <Text style={styles.emptyTitle}>No offers or requests found</Text>
-            <Text style={styles.emptySubtitle}>
-              {searchQuery ? 'Try adjusting your search terms' : 'Check back later for new activity'}
-            </Text>
-          </View>
-        )}
+        <RequestCard
+          userImage="https://via.placeholder.com/40"
+          username="bonk_whale_420"
+          rating={4.8}
+          type="Lending"
+          amount="50M BONK"
+          collateral="150 SOL SOL"
+          apy="12.5%"
+          duration="30 days"
+          description="Looking for reliable SOL holders. Quick approval for 4.5+ reputation."
+          comments={3}
+        />
+        
+        <RequestCard
+          userImage="https://via.placeholder.com/40"
+          username="defi_degen"
+          rating={4.2}
+          type="Borrowing"
+          amount="25M BONK"
+          collateral="2,500 JUP JUP"
+          apy="15.2%"
+          duration="14 days"
+          description="Offering premium JUP tokens. Can add more if needed."
+          comments={7}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -566,44 +442,5 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontWeight: '600',
     fontSize: 14,
-  },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.md,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  loadingText: {
-    fontSize: Typography.base,
-    color: Colors.textSecondary,
-    marginTop: Spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xxl,
-    marginTop: 60,
-  },
-  emptyTitle: {
-    fontSize: Typography.lg,
-    fontWeight: FontWeight.semibold,
-    color: Colors.textPrimary,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  emptySubtitle: {
-    fontSize: Typography.base,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-});
+     },
+ });  

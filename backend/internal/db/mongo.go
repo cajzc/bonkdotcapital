@@ -131,21 +131,6 @@ func GetUserActiveLoans(userAddress string) ([]models.Loan, error) {
 }
 
 
-// GetRequests retrieves all loan requests from the database
-func GetRequests() ([]models.LoanRequest, error) {
-	var requests []models.LoanRequest
-	cursor, err := requestsCollection.Find(context.TODO(), bson.M{})
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(context.TODO())
-
-	if err = cursor.All(context.TODO(), &requests); err != nil {
-		return nil, err
-	}
-	return requests, nil
-}
-
 // GetUserActiveRequests retrieves active loan requests for a specific borrower
 func GetUserActiveRequests(userAddress string) ([]models.LoanRequest, error) {
 	var requests []models.LoanRequest
