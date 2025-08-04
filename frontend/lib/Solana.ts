@@ -6,16 +6,19 @@ import {
 } from "@solana-mobile/mobile-wallet-adapter-protocol-web3js";
 import { APP_IDENTITY, useAuthorization } from "./AuthorizationProvider";
 import { RPC_ENDPOINT, CLUSTER } from "../constants/RpcConnection";
+import type { LendingProtocol } from "../idl/lending_protocol";
+import idl from "../idl/lending_protocol.json";
+import { Program, AnchorProvider, setProvider } from "@coral-xyz/anchor";
 
-// Simple wallet implementation without Anchor dependencies
+// Simple wallet implementation for mobile wallet adapter
 export function useSolanaProgram() {
   const { selectedAccount } = useAuthorization();
-  
+
   // Create connection directly
   const connection = useMemo(() => {
     return new Connection(RPC_ENDPOINT, 'confirmed');
   }, []);
-  
+
   const wallet = useMemo(() => {
     return {
       signTransaction: async (transaction: Transaction) => {
@@ -44,17 +47,30 @@ export function useSolanaProgram() {
           return signedTransactions;
         });
       },
-      get publicKey() {
-        return selectedAccount?.publicKey || null;
-      },
+      publicKey: selectedAccount?.publicKey || null,
     };
   }, [selectedAccount]);
 
-  return { 
-    connection, 
+  // Create Anchor provider and program
+  const provider = useMemo(() => {
+    if (!connection || !wallet || !wallet.publicKey) return null;
+    return new AnchorProvider(connection, wallet as any, {});
+  }, [connection, wallet]);
+
+  const program = useMemo(() => {
+    if (!provider) return null;
+    try {
+      setProvider(provider);
+      return new Program(idl as any, provider);
+    } catch (error) {
+      console.error('Error initializing Solana program:', error);
+      return null;
+    }
+  }, [provider]);
+
+  return {
+    connection,
     wallet,
-    // Return null for program since we're not using Anchor for now
-    program: null 
+    program
   };
 }
-

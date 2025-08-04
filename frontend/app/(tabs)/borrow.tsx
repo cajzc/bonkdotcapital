@@ -13,8 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import { Buffer } from 'buffer';
+import { PublicKey } from '@solana/web3.js';
 import { useSolanaProgram } from '../../lib/Solana';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 
@@ -38,7 +37,7 @@ const Dropdown: React.FC<DropdownProps> = ({ placeholder, value, onPress }) => {
 export default function BorrowScreen() {
   const insets = useSafeAreaInsets();
   const { selectedAccount } = useAuthorization();
-  const { connection, wallet } = useSolanaProgram();
+  const { connection, wallet, program } = useSolanaProgram();
   const [bonkAmount, setBonkAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('');
   const [tokenAmount, setTokenAmount] = useState('');
@@ -47,8 +46,8 @@ export default function BorrowScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmitRequest = async () => {
-    if (!connection || !wallet) {
-      Alert.alert('Error', 'Solana connection not available. Please try again.');
+    if (!connection || !wallet || !program) {
+      Alert.alert('Error', 'Solana connection or program not available. Please try again.');
       return;
     }
 
@@ -59,33 +58,14 @@ export default function BorrowScreen() {
 
     setIsSubmitting(true);
     try {
-      // Get the latest blockhash
-      const { blockhash } = await connection.getLatestBlockhash();
-      
-      // Create a simple transfer transaction as a test
-      const transaction = new Transaction().add(
-        // Add a simple transfer instruction as a test
-        // You can replace this with your actual program instruction later
-        SystemProgram.transfer({
-          fromPubkey: selectedAccount.publicKey,
-          toPubkey: new PublicKey('11111111111111111111111111111111'), // System program
-          lamports: 1000, // Small amount for testing
-        })
-      );
-      
-      // Set the recent blockhash
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = selectedAccount.publicKey;
+      // Call your Anchor program's initialize instruction
+      const txSignature = await program.methods
+        .initialize()
+        .rpc();
 
-      // Sign and send the transaction
-      const signedTx = await wallet.signTransaction(transaction);
-      const signature = await connection.sendRawTransaction(signedTx.serialize());
-      
-      // Wait for confirmation
-      await connection.confirmTransaction(signature, 'confirmed');
+      Alert.alert('Success', `Program instruction executed! Signature: ${txSignature}`);
+      console.log('Program instruction executed!', txSignature);
 
-      Alert.alert('Success', `Transaction successful! Signature: ${signature}`);
-      console.log('Transaction signature:', signature);
     } catch (error: unknown) {
       console.error('Error submitting borrow request:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
