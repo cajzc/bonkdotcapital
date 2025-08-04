@@ -142,6 +142,16 @@ func (app *AppContext) GetUserActiveRequestsHandler(c *gin.Context) {
 }
 
 
+// GetRequestsHandler retrieves all loan requests from the database
+func (app *AppContext) GetRequestsHandler(c *gin.Context) {
+	requests, err := db.GetRequests()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve requests"})
+		return
+	}
+	c.JSON(http.StatusOK, requests)
+}
+
 // GetPlatformStatsHandler retrieves platform-wide statistics and analytics
 func (app *AppContext) GetPlatformStatsHandler(c *gin.Context) {
 	stats, err := db.GetPlatformStats()
