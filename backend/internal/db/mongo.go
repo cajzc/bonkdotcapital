@@ -167,7 +167,7 @@ func GetPlatformStats() (*models.PlatformStats, error) {
 		}},
 	}
 	
-	cursor, err := loansCollection.Aggregate(context.TODO(), pipeline)
+	cursor, err := offersCollection.Aggregate(context.TODO(), pipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func GetPlatformStats() (*models.PlatformStats, error) {
 		{"$limit": 5},
 	}
 	
-	lendersCursor, err := loansCollection.Aggregate(context.TODO(), topLendersPipeline)
+	lendersCursor, err := offersCollection.Aggregate(context.TODO(), topLendersPipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -227,14 +227,14 @@ func GetPlatformStats() (*models.PlatformStats, error) {
 	collateralPipeline := []bson.M{
 		{"$match": bson.M{"is_active": true}},
 		{"$group": bson.M{
-			"_id": "$collateral_token",
+			"_id": "$token",
 			"count": bson.M{"$sum": 1},
 		}},
 		{"$sort": bson.M{"count": -1}},
 		{"$limit": 5},
 	}
 	
-	collateralCursor, err := loansCollection.Aggregate(context.TODO(), collateralPipeline)
+	collateralCursor, err := offersCollection.Aggregate(context.TODO(), collateralPipeline)
 	if err != nil {
 		return nil, err
 	}
