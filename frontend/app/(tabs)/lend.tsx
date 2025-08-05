@@ -17,12 +17,14 @@ import { useSolanaProgram } from '../../lib/Solana';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { getUserTokenAccounts, TokenInfo, getTokenSymbol } from '../../lib/tokenUtils';
 import { RPC_ENDPOINT } from '@/constants/RpcConnection';
-import { Connection } from '@solana/web3.js';
+import { Connection, PublicKey, Transaction, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
+import { BN } from '@coral-xyz/anchor';
 
 export default function LendScreen() {
   const insets = useSafeAreaInsets();
   const { selectedAccount } = useAuthorization();
-  const { program } = useSolanaProgram();
+  const { program, wallet } = useSolanaProgram();
   const [lendingAmount, setLendingAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,13 +97,112 @@ export default function LendScreen() {
       return;
     }
 
+    if (!program) {
+      Alert.alert('Error', 'Solana program not available. Please try again.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Convert amount to number
+      const amount = parseFloat(lendingAmount);
+      if (isNaN(amount) || amount <= 0) {
+        Alert.alert('Error', 'Please enter a valid amount');
+        return;
+      }
+
+             // Get the user's public key
+       const userPublicKey = selectedAccount?.publicKey;
+       if (!userPublicKey) {
+         Alert.alert('Error', 'Wallet not connected');
+         return;
+       }
+
+       // Find the token account for the selected token
+       const tokenAccounts = await connection.getTokenAccountsByOwner(
+         userPublicKey,
+         {
+           mint: new PublicKey(selectedToken.mint)
+         }
+       );
+
+       if (tokenAccounts.value.length === 0) {
+         Alert.alert('Error', 'No token account found for the selected token');
+         return;
+       }
+
+       const lenderTokenAccount = tokenAccounts.value[0].pubkey;
+       console.log('Using token account:', lenderTokenAccount.toString());
+
+       // Create PDA for the loan offer
+       const [loanOfferPda] = PublicKey.findProgramAddressSync(
+         [
+           Buffer.from('loan_offer'),
+           userPublicKey.toBuffer(),
+           new PublicKey(selectedToken.mint).toBuffer(),
+         ],
+         program.programId
+       );
+
+       // Create PDA for the vault
+       const [vaultPda] = PublicKey.findProgramAddressSync(
+         [
+           Buffer.from('vault'),
+           loanOfferPda.toBuffer(),
+         ],
+         program.programId
+       );
+
+       // Create the instruction
+       const instruction = await program.methods
+         .initializeCreateLoan(
+           new BN(amount * Math.pow(10, 6)), // amount
+           500, // interest_rate_bps (5% = 500 basis points)
+           new BN(1000), // duration_slots
+           new BN(0), // min_score
+           0 // bump (Anchor will handle this)
+         )
+         .accounts({
+           loanOffer: loanOfferPda,
+           vault: vaultPda,
+           lender: userPublicKey,
+           lenderTokenAccount: lenderTokenAccount, // Use the actual token account
+           tokenMint: new PublicKey(selectedToken.mint),
+           tokenProgram: TOKEN_PROGRAM_ID,
+           systemProgram: SystemProgram.programId,
+           rent: SYSVAR_RENT_PUBKEY,
+         })
+         .instruction();
+
+      // Create and send transaction
+      const transaction = new Transaction();
+      transaction.add(instruction);
+
+      // Get latest blockhash
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = userPublicKey;
+
+      // Sign and send transaction using the wallet
+      const signedTransaction = await wallet?.signTransaction(transaction);
+      if (!signedTransaction) {
+        throw new Error('Failed to sign transaction');
+      }
+
+      const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+      await connection.confirmTransaction(signature);
+      
+      console.log('Transaction signature:', signature);
       Alert.alert('Success', `Loan offer created for ${getTokenSymbol(selectedToken.mint.toString())} → ${selectedReceiveToken}!`);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create loan offer');
+      
+      // Reset form
+      setLendingAmount('');
+      setSelectedToken(null);
+      setSelectedReceiveToken(null);
+      
+    } catch (error: any) {
+      console.error('Error creating loan offer:', error);
+      Alert.alert('Error', `Failed to create loan offer: ${error?.message || 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -224,7 +325,7 @@ export default function LendScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Receive Token</Text>
+            <Text style={styles.inputLabel}>Collateral Token</Text>
             <View style={styles.tokenOptions}>
               <TouchableOpacity 
                 style={[styles.tokenOption, selectedReceiveToken === 'SOL' && styles.tokenOptionSelected]}

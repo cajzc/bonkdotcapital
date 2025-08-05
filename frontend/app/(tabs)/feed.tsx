@@ -15,9 +15,12 @@ import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, Semanti
 import ConnectButton from '@/components/ConnectButton';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, Connection, Transaction, SystemProgram, SYSVAR_RENT_PUBKEY, SYSVAR_CLOCK_PUBKEY } from '@solana/web3.js';
 import { useSolanaProgram } from '../../lib/Solana';
 import { Buffer } from 'buffer';
+import { TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
+import { BN } from '@coral-xyz/anchor';
+import { RPC_ENDPOINT } from '@/constants/RpcConnection';
 
 interface RequestCardProps {
   userImage: string;
@@ -48,6 +51,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
   const { selectedAccount } = useAuthorization();
   const { connection, wallet, program } = useSolanaProgram();
   const [isPaying, setIsPaying] = useState(false);
+  const [isBorrowing, setIsBorrowing] = useState(false);
 
   const handlePayLoan = async () => {
     if (!connection || !wallet || !program) {
@@ -112,6 +116,117 @@ const RequestCard: React.FC<RequestCardProps> = ({
       setIsPaying(false);
     }
   };
+
+  const handleBorrow = async () => {
+    if (!connection || !wallet || !program) {
+      Alert.alert('Error', 'Solana connection or program not available. Please try again.');
+      return;
+    }
+
+    if (!selectedAccount?.publicKey) {
+      Alert.alert('Error', 'Please connect your wallet first');
+      return;
+    }
+
+    setIsBorrowing(true);
+    try {
+      // For demo purposes, we'll use placeholder values
+      // In a real app, you'd get these from the selected loan offer
+      const tokenMint = new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'); // BONK token mint
+      const lenderPublicKey = new PublicKey('11111111111111111111111111111111'); // Placeholder lender
+
+      // Find PDA for loan offer
+      const [loanOfferPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('loan_offer'),
+          lenderPublicKey.toBuffer(),
+          tokenMint.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find PDA for loan
+      const [loanPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('loan'),
+          loanOfferPda.toBuffer(),
+          selectedAccount.publicKey.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find PDA for vault
+      const [vaultPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('vault'),
+          loanOfferPda.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find the borrower's token account for the mint
+      const tokenAccounts = await connection.getTokenAccountsByOwner(
+        selectedAccount.publicKey,
+        {
+          mint: tokenMint
+        }
+      );
+
+      if (tokenAccounts.value.length === 0) {
+        Alert.alert('Error', 'No token account found for the selected token');
+        return;
+      }
+
+      const borrowerTokenAccount = tokenAccounts.value[0].pubkey;
+      console.log('Using borrower token account:', borrowerTokenAccount.toString());
+
+      // Create the instruction
+      const instruction = await program.methods
+        .intializeAcceptLoan(
+          0 // bump (Anchor will handle this)
+        )
+        .accounts({
+          loanOffer: loanOfferPda,
+          loan: loanPda,
+          borrowerTokenAccount: borrowerTokenAccount,
+          vault: vaultPda,
+          borrower: selectedAccount.publicKey,
+          tokenMint: tokenMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          rent: SYSVAR_RENT_PUBKEY,
+          clock: SYSVAR_CLOCK_PUBKEY,
+        })
+        .instruction();
+
+      // Create and send transaction
+      const transaction = new Transaction();
+      transaction.add(instruction);
+
+      // Get latest blockhash
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = selectedAccount.publicKey;
+
+      // Sign and send transaction using the wallet
+      const signedTransaction = await wallet?.signTransaction(transaction);
+      if (!signedTransaction) {
+        throw new Error('Failed to sign transaction');
+      }
+
+      const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+      await connection.confirmTransaction(signature);
+      
+      console.log('Loan accepted! Signature:', signature);
+      Alert.alert('Success', `Loan accepted! You can now borrow ${amount}`);
+
+    } catch (error: any) {
+      console.error('Error accepting loan:', error);
+      Alert.alert('Error', `Failed to accept loan: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsBorrowing(false);
+    }
+  };
   
   return (
     <View style={styles.requestCard}>
@@ -165,6 +280,17 @@ const RequestCard: React.FC<RequestCardProps> = ({
             >
               <Text style={styles.payLoanButtonText}>
                 {isPaying ? 'Paying...' : 'Pay Loan'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {isLending && (
+            <TouchableOpacity 
+              style={[styles.borrowButton, isBorrowing && styles.borrowButtonDisabled]}
+              onPress={handleBorrow}
+              disabled={isBorrowing}
+            >
+              <Text style={styles.borrowButtonText}>
+                {isBorrowing ? 'Borrowing...' : 'Borrow'}
               </Text>
             </TouchableOpacity>
           )}
@@ -543,6 +669,21 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   payLoanButtonText: {
+    color: Colors.textLight,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  borrowButton: {
+    backgroundColor: Colors.info,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    ...Shadows.primary,
+  },
+  borrowButtonDisabled: {
+    opacity: 0.6,
+  },
+  borrowButtonText: {
     color: Colors.textLight,
     fontWeight: '600',
     fontSize: 12,
