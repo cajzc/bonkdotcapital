@@ -15,7 +15,7 @@ import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSolanaProgram } from '../../lib/Solana';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
-import { getUserTokenAccounts, TokenInfo, getTokenSymbol, createMockTokens } from '../../lib/tokenUtils';
+import { getUserTokenAccounts, TokenInfo, getTokenSymbol } from '../../lib/tokenUtils';
 
 export default function LendScreen() {
   const insets = useSafeAreaInsets();
@@ -39,20 +39,11 @@ export default function LendScreen() {
     
     setIsLoadingTokens(true);
     try {
-      const tokens = await getUserTokenAccounts(connection, selectedAccount.publicKey);
-      
-      if (tokens.length === 0) {
-        console.log('No real tokens found, using mock tokens for testing');
-        const mockTokens = createMockTokens(selectedAccount.publicKey);
-        setUserTokens(mockTokens);
-      } else {
-        setUserTokens(tokens);
-      }
+      const tokens = await getUserTokenAccounts(connection, selectedAccount.publicKey.toString());
+      setUserTokens(tokens);
     } catch (error) {
       console.error('Error loading user tokens:', error);
-      Alert.alert('Error', 'Failed to load your tokens. Using mock tokens for testing.');
-      const mockTokens = createMockTokens(selectedAccount.publicKey);
-      setUserTokens(mockTokens);
+      Alert.alert('Error', 'Failed to load your tokens. Please try again.');
     } finally {
       setIsLoadingTokens(false);
     }
@@ -73,7 +64,7 @@ export default function LendScreen() {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      Alert.alert('Success', `Loan offer created for ${getTokenSymbol(selectedToken.mint.toString())}! (Demo mode)`);
+      Alert.alert('Success', `Loan offer created for ${getTokenSymbol(selectedToken.mint.toString())}!`);
     } catch (error) {
       Alert.alert('Error', 'Failed to create loan offer');
     } finally {
@@ -101,14 +92,13 @@ export default function LendScreen() {
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Loading your tokens...</Text>
             </View>
-          ) : userTokens.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No tokens found in your wallet</Text>
-              <Text style={styles.emptyText}>Using demo tokens for testing</Text>
-              <TouchableOpacity style={styles.refreshButton} onPress={loadUserTokens}>
-                <Text style={styles.refreshButtonText}>Refresh</Text>
-              </TouchableOpacity>
-            </View>
+                     ) : userTokens.length === 0 ? (
+             <View style={styles.emptyContainer}>
+               <Text style={styles.emptyText}>No tokens found in your wallet</Text>
+               <TouchableOpacity style={styles.refreshButton} onPress={loadUserTokens}>
+                 <Text style={styles.refreshButtonText}>Refresh</Text>
+               </TouchableOpacity>
+             </View>
           ) : (
             <ScrollView style={styles.tokenList}>
               {userTokens.map((token, index) => (
