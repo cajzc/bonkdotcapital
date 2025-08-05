@@ -18,11 +18,12 @@ type LoanOffer struct {
 }
 
 type Comment struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	OfferID   primitive.ObjectID `bson:"offer_id" json:"offer_id"` // Links comment to a LoanOffer
-	Author    string             `bson:"author" json:"author"`
-	Content   string             `bson:"content" json:"content"`
-	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
+	ID        primitive.ObjectID  `bson:"_id,omitempty" json:"id,omitempty"`
+	OfferID   *primitive.ObjectID `bson:"offer_id,omitempty" json:"offer_id,omitempty"` // Links comment to a LoanOffer (optional)
+	RequestID *primitive.ObjectID `bson:"request_id,omitempty" json:"request_id,omitempty"` // Links comment to a LoanRequest (optional)
+	Author    string              `bson:"author" json:"author"`
+	Content   string              `bson:"content" json:"content"`
+	CreatedAt time.Time           `bson:"created_at" json:"created_at"`
 }
 
 type Loan struct {

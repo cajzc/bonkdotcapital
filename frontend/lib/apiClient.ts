@@ -10,10 +10,24 @@ import type {
   ApiError 
 } from '../types/backend';
 
-// Use 10.0.2.2 for Android emulator, localhost for iOS simulator
-const API_BASE_URL = __DEV__ 
-  ? (Platform.OS === 'android' ? 'http://10.0.2.2:8080/api/v1' : 'http://localhost:8080/api/v1')
-  : 'http://your-production-server.com/api/v1';
+// Use different IPs based on platform and device type
+const getApiBaseUrl = () => {
+  if (!__DEV__) {
+    return 'http://your-production-server.com/api/v1';
+  }
+  
+  if (Platform.OS === 'android') {
+    // For physical Android devices, use your computer's network IP
+    // For Android emulator, use 10.0.2.2
+    // You can detect emulator vs physical device, but for now use network IP
+    return 'http://192.168.1.111:8080/api/v1';
+  } else {
+    // For iOS simulator, web, or other platforms
+    return 'http://localhost:8080/api/v1';
+  }
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -64,6 +78,10 @@ class ApiClient {
     return this.request<LoanRequest[]>('/requests/');
   }
 
+  async getLoanRequestById(id: string): Promise<LoanRequest> {
+    return this.request<LoanRequest>(`/requests/${id}`);
+  }
+
   // User-specific data
   async getUserLoans(userAddress: string): Promise<Loan[]> {
     return this.request<Loan[]>(`/users/${userAddress}/loans/`);
@@ -80,6 +98,17 @@ class ApiClient {
 
   async createComment(offerId: string, comment: Omit<Comment, 'id' | 'offer_id' | 'created_at'>): Promise<Comment> {
     return this.request<Comment>(`/offers/${offerId}/comments/`, {
+      method: 'POST',
+      body: JSON.stringify(comment),
+    });
+  }
+
+  async getCommentsForRequest(requestId: string): Promise<Comment[]> {
+    return this.request<Comment[]>(`/requests/${requestId}/comments`);
+  }
+
+  async createRequestComment(requestId: string, comment: Omit<Comment, 'id' | 'request_id' | 'created_at'>): Promise<Comment> {
+    return this.request<Comment>(`/requests/${requestId}/comments`, {
       method: 'POST',
       body: JSON.stringify(comment),
     });

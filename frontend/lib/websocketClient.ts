@@ -3,10 +3,24 @@
 import { Platform } from 'react-native';
 import type { WebSocketMessage } from '../types/backend';
 
-// Use 10.0.2.2 for Android emulator, localhost for iOS simulator
-const WS_BASE_URL = __DEV__ 
-  ? (Platform.OS === 'android' ? 'ws://10.0.2.2:8080/api/v1/ws' : 'ws://localhost:8080/api/v1/ws')
-  : 'ws://your-production-server.com/api/v1/ws';
+// Use different IPs based on platform and device type
+const getWsBaseUrl = () => {
+  if (!__DEV__) {
+    return 'ws://your-production-server.com/api/v1/ws';
+  }
+  
+  if (Platform.OS === 'android') {
+    // For physical Android devices, use your computer's network IP
+    // For Android emulator, use 10.0.2.2
+    // You can detect emulator vs physical device, but for now use network IP
+    return 'ws://192.168.1.111:8080/api/v1/ws';
+  } else {
+    // For iOS simulator, web, or other platforms
+    return 'ws://localhost:8080/api/v1/ws';
+  }
+};
+
+const WS_BASE_URL = getWsBaseUrl();
 
 type MessageHandler = (message: WebSocketMessage) => void;
 

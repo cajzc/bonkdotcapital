@@ -89,7 +89,7 @@ func (c *Client) WritePump() {
 
 // ServeWs handles websocket requests from the peer.
 func ServeWs(hub *Hub, c *gin.Context) {
-	room := c.Param("offerId")
+	room := c.Param("roomId")
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println(err)

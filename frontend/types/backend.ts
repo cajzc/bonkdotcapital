@@ -41,7 +41,7 @@ export interface Loan {
 export interface Comment {
   id: string;
   offer_id: string;
-  user_address: string;
+  author: string;
   content: string;
   created_at: string;
 }

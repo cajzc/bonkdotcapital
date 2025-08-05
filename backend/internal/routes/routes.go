@@ -10,8 +10,8 @@ func SetupRoutes(router *gin.Engine, app *handlers.AppContext) {
 	// Group routes under /api/v1
 	api := router.Group("/api/v1")
 	{
-		// websocket connection endpoint for a specific offer room
-		api.GET("/ws/:offerId", func(c *gin.Context) {
+		// websocket connection endpoint for a specific offer or request room
+		api.GET("/ws/:roomId", func(c *gin.Context) {
 			websocket.ServeWs(app.Hub, c)
 		})
 
@@ -39,6 +39,15 @@ func SetupRoutes(router *gin.Engine, app *handlers.AppContext) {
 		{
 			// route for getting list of all loan requests
 			requests.GET("/", app.GetRequestsHandler)
+
+			// route for getting details of specific loan request
+			requests.GET("/:requestId", app.GetRequestByIDHandler)
+			
+			// route for creating comment on specific loan request
+			requests.POST("/:requestId/comments", app.CreateRequestCommentHandler)
+
+			// route for getting all comments on a specific loan request
+			requests.GET("/:requestId/comments", app.GetRequestCommentsHandler)
 		}
 
 		// Routes for user-specific data

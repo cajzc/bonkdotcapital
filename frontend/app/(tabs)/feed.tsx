@@ -12,6 +12,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, SemanticColors } from '../../constants';
 import ConnectButton from '@/components/ConnectButton';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
@@ -191,7 +192,11 @@ export default function FeedScreen() {
   };
 
   const handleViewDetails = (type: 'offer' | 'request', id: string) => {
-    console.log(`View details for ${type}:`, id);
+    if (type === 'offer') {
+      router.push(`/offer-details?offerId=${id}`);
+    } else if (type === 'request') {
+      router.push(`/request-details?requestId=${id}`);
+    }
   };
 
   // Combine offers and requests for display

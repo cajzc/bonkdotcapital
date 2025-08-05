@@ -77,7 +77,25 @@ func CreateComment(offerID string, comment *models.Comment) (*models.Comment, er
 	}
 	
 	comment.ID = primitive.NewObjectID()
-	comment.OfferID = objID
+	comment.OfferID = &objID
+	comment.CreatedAt = time.Now()
+
+	_, err = commentsCollection.InsertOne(context.TODO(), comment)
+	if err != nil {
+		return nil, err
+	}
+	return comment, nil
+}
+
+// CreateRequestComment creates a new comment linked to a specific loan request
+func CreateRequestComment(requestID string, comment *models.Comment) (*models.Comment, error) {
+	objID, err := primitive.ObjectIDFromHex(requestID)
+	if err != nil {
+		return nil, err
+	}
+	
+	comment.ID = primitive.NewObjectID()
+	comment.RequestID = &objID
 	comment.CreatedAt = time.Now()
 
 	_, err = commentsCollection.InsertOne(context.TODO(), comment)
@@ -105,6 +123,41 @@ func GetCommentsForOffer(offerID string) ([]models.Comment, error) {
 		return nil, err
 	}
 	return comments, nil
+}
+
+// GetCommentsForRequest retrieves all comments for a specific loan request
+func GetCommentsForRequest(requestID string) ([]models.Comment, error) {
+	objID, err := primitive.ObjectIDFromHex(requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	var comments []models.Comment
+	cursor, err := commentsCollection.Find(context.TODO(), bson.M{"request_id": objID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	if err = cursor.All(context.TODO(), &comments); err != nil {
+		return nil, err
+	}
+	return comments, nil
+}
+
+// GetRequestByID retrieves a specific loan request by its MongoDB ObjectID
+func GetRequestByID(id string) (*models.LoanRequest, error) {
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+
+	var request models.LoanRequest
+	err = requestsCollection.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&request)
+	if err != nil {
+		return nil, err
+	}
+	return &request, nil
 }
 
 

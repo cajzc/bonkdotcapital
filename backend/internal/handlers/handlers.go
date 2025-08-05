@@ -152,6 +152,54 @@ func (app *AppContext) GetRequestsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, requests)
 }
 
+// GetRequestByIDHandler retrieves a specific loan request by its ID
+func (app *AppContext) GetRequestByIDHandler(c *gin.Context) {
+	requestID := c.Param("requestId")
+	request, err := db.GetRequestByID(requestID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Request not found"})
+		return
+	}
+	c.JSON(http.StatusOK, request)
+}
+
+// CreateRequestCommentHandler creates a new comment on a loan request and broadcasts it
+func (app *AppContext) CreateRequestCommentHandler(c *gin.Context) {
+	requestID := c.Param("requestId")
+	var comment models.Comment
+	if err := c.ShouldBindJSON(&comment); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	createdComment, err := db.CreateRequestComment(requestID, &comment)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create comment"})
+		return
+	}
+
+    // New comments are broadcast only to the room for that specific request.
+	broadcastMessage, err := json.Marshal(createdComment)
+	if err == nil {
+		app.Hub.Broadcast <- websocket.Message{Room: requestID, Content: broadcastMessage}
+	} else {
+		log.Printf("Error marshalling comment for broadcast: %v", err)
+	}
+
+	c.JSON(http.StatusCreated, createdComment)
+}
+
+// GetRequestCommentsHandler retrieves all comments for a specific loan request
+func (app *AppContext) GetRequestCommentsHandler(c *gin.Context) {
+	requestID := c.Param("requestId")
+	comments, err := db.GetCommentsForRequest(requestID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve comments"})
+		return
+	}
+	c.JSON(http.StatusOK, comments)
+}
+
 // GetPlatformStatsHandler retrieves platform-wide statistics and analytics
 func (app *AppContext) GetPlatformStatsHandler(c *gin.Context) {
 	stats, err := db.GetPlatformStats()
