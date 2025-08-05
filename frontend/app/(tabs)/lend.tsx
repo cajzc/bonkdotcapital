@@ -16,31 +16,61 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSolanaProgram } from '../../lib/Solana';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { getUserTokenAccounts, TokenInfo, getTokenSymbol } from '../../lib/tokenUtils';
+import { RPC_ENDPOINT } from '@/constants/RpcConnection';
+import { Connection } from '@solana/web3.js';
 
 export default function LendScreen() {
   const insets = useSafeAreaInsets();
   const { selectedAccount } = useAuthorization();
-  const { connection } = useSolanaProgram();
+  const { program } = useSolanaProgram();
   const [lendingAmount, setLendingAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userTokens, setUserTokens] = useState<TokenInfo[]>([]);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
+  const [hasLoadedTokens, setHasLoadedTokens] = useState(false);
+  const [selectedReceiveToken, setSelectedReceiveToken] = useState<'SOL' | 'BONK' | null>(null);
+
+  // Create connection once, not on every render
+  const connection = React.useMemo(() => new Connection(RPC_ENDPOINT), []);
 
   useEffect(() => {
-    if (connection && selectedAccount?.publicKey) {
+    console.log('useEffect triggered:', { 
+      hasConnection: !!connection, 
+      hasSelectedAccount: !!selectedAccount,
+      publicKey: selectedAccount?.publicKey?.toString(),
+      hasLoadedTokens
+    });
+    
+    if (connection && selectedAccount?.publicKey && !hasLoadedTokens) {
+      console.log('Calling loadUserTokens...');
       loadUserTokens();
     }
   }, [connection, selectedAccount]);
 
   const loadUserTokens = async () => {
-    if (!connection || !selectedAccount?.publicKey) return;
+    console.log('loadUserTokens called');
+    console.log('Debug info:', {
+      hasConnection: !!connection,
+      hasSelectedAccount: !!selectedAccount,
+      publicKey: selectedAccount?.publicKey?.toString(),
+      hasLoadedTokens,
+      userTokensLength: userTokens.length
+    });
     
+    if (!connection || !selectedAccount?.publicKey) {
+      console.log('Missing connection or selectedAccount');
+      return;
+    }
+    
+    console.log('Starting token fetch for:', selectedAccount.publicKey.toString());
     setIsLoadingTokens(true);
     try {
       const tokens = await getUserTokenAccounts(connection, selectedAccount.publicKey.toString());
+      console.log('Tokens received:', tokens);
       setUserTokens(tokens);
+      setHasLoadedTokens(true);
     } catch (error) {
       console.error('Error loading user tokens:', error);
       Alert.alert('Error', 'Failed to load your tokens. Please try again.');
@@ -60,11 +90,16 @@ export default function LendScreen() {
       return;
     }
 
+    if (!selectedReceiveToken) {
+      Alert.alert('Error', 'Please select a token to receive');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      Alert.alert('Success', `Loan offer created for ${getTokenSymbol(selectedToken.mint.toString())}!`);
+      Alert.alert('Success', `Loan offer created for ${getTokenSymbol(selectedToken.mint.toString())} → ${selectedReceiveToken}!`);
     } catch (error) {
       Alert.alert('Error', 'Failed to create loan offer');
     } finally {
@@ -95,9 +130,9 @@ export default function LendScreen() {
                      ) : userTokens.length === 0 ? (
              <View style={styles.emptyContainer}>
                <Text style={styles.emptyText}>No tokens found in your wallet</Text>
-               <TouchableOpacity style={styles.refreshButton} onPress={loadUserTokens}>
-                 <Text style={styles.refreshButtonText}>Refresh</Text>
-               </TouchableOpacity>
+                               <TouchableOpacity style={styles.refreshButton} onPress={loadUserTokens}>
+                  <Text style={styles.refreshButtonText}>Refresh</Text>
+                </TouchableOpacity>
              </View>
           ) : (
             <ScrollView style={styles.tokenList}>
@@ -135,6 +170,9 @@ export default function LendScreen() {
           <Text style={styles.title}>Create Lending Offer</Text>
           <Text style={styles.subtitle}>Set your terms and start earning</Text>
         </View>
+        <TouchableOpacity onPress={loadUserTokens} style={styles.debugButton}>
+          <Text style={styles.debugButtonText}>Load Tokens</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -184,12 +222,34 @@ export default function LendScreen() {
               keyboardType="numeric"
             />
           </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Receive Token</Text>
+            <View style={styles.tokenOptions}>
+              <TouchableOpacity 
+                style={[styles.tokenOption, selectedReceiveToken === 'SOL' && styles.tokenOptionSelected]}
+                onPress={() => setSelectedReceiveToken('SOL')}
+              >
+                <Text style={[styles.tokenOptionText, selectedReceiveToken === 'SOL' && styles.tokenOptionTextSelected]}>
+                  SOL
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tokenOption, selectedReceiveToken === 'BONK' && styles.tokenOptionSelected]}
+                onPress={() => setSelectedReceiveToken('BONK')}
+              >
+                <Text style={[styles.tokenOptionText, selectedReceiveToken === 'BONK' && styles.tokenOptionTextSelected]}>
+                  BONK
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         <TouchableOpacity 
           style={[styles.createButton, isSubmitting && styles.createButtonDisabled]} 
           onPress={handleCreateOffer}
-          disabled={isSubmitting || !selectedToken}
+          disabled={isSubmitting || !selectedToken || !selectedReceiveToken}
         >
           <Text style={styles.createButtonText}>
             {isSubmitting ? 'Creating...' : 'Create Lending Offer'}
@@ -430,6 +490,43 @@ const styles = StyleSheet.create({
   previewValue: {
     fontSize: Typography.sm,
     fontWeight: FontWeight.semibold,
+    color: Colors.textLight,
+  },
+  debugButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  debugButtonText: {
+    color: Colors.textLight,
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.medium,
+  },
+  tokenOptions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  tokenOption: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
+    backgroundColor: Colors.borderLight,
+  },
+  tokenOptionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
+  },
+  tokenOptionText: {
+    fontSize: Typography.base,
+    fontWeight: FontWeight.medium,
+    color: Colors.textPrimary,
+  },
+  tokenOptionTextSelected: {
     color: Colors.textLight,
   },
 }); 
