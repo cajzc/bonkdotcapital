@@ -17,7 +17,7 @@ import { useSolanaProgram } from '../../lib/Solana';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { getUserTokenAccounts, TokenInfo, getTokenSymbol } from '../../lib/tokenUtils';
 import { RPC_ENDPOINT } from '@/constants/RpcConnection';
-import { createLoanOffer } from '../../lib/solanaOperations';
+import { createLoanOffer } from '../../lib/instructions/CreateLoan';
 import { Connection } from '@solana/web3.js';
 
 export default function LendScreen() {

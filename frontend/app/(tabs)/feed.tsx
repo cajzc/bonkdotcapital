@@ -16,7 +16,7 @@ import ConnectButton from '@/components/ConnectButton';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSolanaProgram } from '../../lib/Solana';
-import { acceptLoan, payLoan, LoanOfferData, PayLoanData } from '../../lib/solanaOperations';
+import { acceptLoan, payLoan, LoanOfferData, PayLoanData } from '../../lib/instructions/CreateLoan';
 
 interface RequestCardProps {
   userImage: string;

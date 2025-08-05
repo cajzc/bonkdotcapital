@@ -73,7 +73,7 @@ export async function createLoanOffer(
       500, // interest_rate_bps (5% = 500 basis points)
       new BN(1000), // duration_slots
       new BN(0), // min_score
-      0 // bump (Anchor will handle this)
+      0 // bump 
     )
     .accounts({
       loanOffer: loanOfferPda,
