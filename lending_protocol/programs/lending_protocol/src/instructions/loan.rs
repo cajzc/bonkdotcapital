@@ -262,8 +262,7 @@ pub fn pay_loan(ctx:Context<PayLoan>) -> Result<()>{
        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
 
        token::transfer(cpi_ctx, amount_to_return)?;
-      msg!("Returned {} collateral to borrower", amount_to_return);
-      obligation.deposited_amount = 0;
+      msg!("Returned {} collateral to borrower", amount_to_return); 
     }
 
      msg!(
