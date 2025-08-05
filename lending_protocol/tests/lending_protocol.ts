@@ -428,10 +428,10 @@ describe("lending_protocol", () => {
     );
 
     // Collateral should be returned: borrower balance increases, vault balance decreases
-   // assert.isAbove(
-   //   parseInt(borrowerCollateralBalanceAfter.value.amount),
-   //   parseInt(borrowerCollateralBalanceBefore.value.amount),
-   //   "Borrower's collateral balance should increase after repayment"
+    //assert.isAbove(
+    //  parseInt(borrowerCollateralBalanceAfter.value.amount),
+    //  parseInt(borrowerCollateralBalanceBefore.value.amount),
+    //  "Borrower's collateral balance should increase after repayment"
    // );
 
    // assert.isBelow(

@@ -242,7 +242,30 @@ pub fn pay_loan(ctx:Context<PayLoan>) -> Result<()>{
     obligation.loan_active = false;
 
     //Return collateral to the borrower
-  
+    let amount_to_return = obligation.deposited_amount;
+
+    if amount_to_return > 0 {
+        let seeds = &[
+          b"obligation",
+          ctx.accounts.borrower.key.as_ref(),
+         &[obligation.bump],
+        ];
+
+        let signer = &[&seeds[..]];
+
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.collateral_vault.to_account_info(),
+            to: ctx.accounts.borrower_token_account.to_account_info(),
+            authority: obligation.to_account_info(),
+        };
+       let cpi_program = ctx.accounts.token_program.to_account_info();
+       let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+
+       token::transfer(cpi_ctx, amount_to_return)?;
+      msg!("Returned {} collateral to borrower", amount_to_return);
+      obligation.deposited_amount = 0;
+    }
+
      msg!(
         "Loan repaid: Borrower {} paid {} (principal: {}, interest: {}) to lender {}",
         ctx.accounts.borrower.key(),
@@ -281,6 +304,15 @@ pub struct PayLoan<'info>{
         has_one = borrower
     )]
     pub obligation: Account<'info, Obligation>,
+
+    #[account(
+        mut,
+        seeds = [b"collateral_vault", borrower.key().as_ref(), token_mint.key().as_ref()],
+        bump,
+        token::mint = token_mint,
+        token::authority = obligation
+    )]
+    pub collateral_vault: Account<'info, TokenAccount>,
 
     #[account(
         mut,
