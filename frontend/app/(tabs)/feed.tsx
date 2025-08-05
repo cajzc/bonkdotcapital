@@ -15,12 +15,8 @@ import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, Semanti
 import ConnectButton from '@/components/ConnectButton';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PublicKey, Connection, Transaction, SystemProgram, SYSVAR_RENT_PUBKEY, SYSVAR_CLOCK_PUBKEY } from '@solana/web3.js';
 import { useSolanaProgram } from '../../lib/Solana';
-import { Buffer } from 'buffer';
-import { TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
-import { BN } from '@coral-xyz/anchor';
-import { RPC_ENDPOINT } from '@/constants/RpcConnection';
+import { acceptLoan, payLoan, LoanOfferData, PayLoanData } from '../../lib/solanaOperations';
 
 interface RequestCardProps {
   userImage: string;
@@ -68,50 +64,26 @@ const RequestCard: React.FC<RequestCardProps> = ({
     try {
       // For demo purposes, we'll use placeholder values
       // In a real app, you'd get these from the selected loan
-      const tokenMint = new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'); // BONK token mint
-      const lenderPublicKey = new PublicKey('11111111111111111111111111111111'); // Placeholder lender
+      const payLoanData: PayLoanData = {
+        tokenMint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', // BONK token mint
+        lenderPublicKey: '11111111111111111111111111111111', // Placeholder lender
+        borrowerPublicKey: selectedAccount.publicKey.toString(),
+      };
 
-      // Find PDA for loan offer
-      const [loanOfferPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('loan_offer'),
-          lenderPublicKey.toBuffer(),
-          tokenMint.toBuffer(),
-        ],
-        program.programId
+      const signature = await payLoan(
+        program,
+        connection,
+        wallet,
+        selectedAccount.publicKey,
+        payLoanData
       );
 
-      // Find PDA for loan
-      const [loanPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('loan'),
-          loanOfferPda.toBuffer(),
-          selectedAccount.publicKey.toBuffer(),
-        ],
-        program.programId
-      );
+      Alert.alert('Success', `Loan paid! Signature: ${signature}`);
+      console.log('Loan paid!', signature);
 
-      const txSignature = await program.methods
-        .initializePayLoan()
-        .accounts({
-          loan: loanPda,
-          loanOffer: loanOfferPda,
-          borrowerTokenAccount: selectedAccount.publicKey, // You'll need the actual token account
-          lenderTokenAccount: lenderPublicKey, // You'll need the actual lender token account
-          borrower: selectedAccount.publicKey,
-          tokenMint: tokenMint,
-          tokenProgram: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-          clock: new PublicKey('SysvarC1ock11111111111111111111111111111111'),
-        })
-        .rpc();
-
-      Alert.alert('Success', `Loan paid! Signature: ${txSignature}`);
-      console.log('Loan paid!', txSignature);
-
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Error paying loan:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      Alert.alert('Error', `Failed to pay loan: ${errorMessage}`);
+      Alert.alert('Error', `Failed to pay loan: ${error?.message || 'Unknown error'}`);
     } finally {
       setIsPaying(false);
     }
@@ -132,90 +104,19 @@ const RequestCard: React.FC<RequestCardProps> = ({
     try {
       // For demo purposes, we'll use placeholder values
       // In a real app, you'd get these from the selected loan offer
-      const tokenMint = new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'); // BONK token mint
-      const lenderPublicKey = new PublicKey('11111111111111111111111111111111'); // Placeholder lender
+      const loanOfferData: LoanOfferData = {
+        tokenMint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', // BONK token mint
+        lenderPublicKey: '11111111111111111111111111111111', // Placeholder lender
+        amount: amount,
+      };
 
-      // Find PDA for loan offer
-      const [loanOfferPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('loan_offer'),
-          lenderPublicKey.toBuffer(),
-          tokenMint.toBuffer(),
-        ],
-        program.programId
-      );
-
-      // Find PDA for loan
-      const [loanPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('loan'),
-          loanOfferPda.toBuffer(),
-          selectedAccount.publicKey.toBuffer(),
-        ],
-        program.programId
-      );
-
-      // Find PDA for vault
-      const [vaultPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('vault'),
-          loanOfferPda.toBuffer(),
-        ],
-        program.programId
-      );
-
-      // Find the borrower's token account for the mint
-      const tokenAccounts = await connection.getTokenAccountsByOwner(
+      const signature = await acceptLoan(
+        program,
+        connection,
+        wallet,
         selectedAccount.publicKey,
-        {
-          mint: tokenMint
-        }
+        loanOfferData
       );
-
-      if (tokenAccounts.value.length === 0) {
-        Alert.alert('Error', 'No token account found for the selected token');
-        return;
-      }
-
-      const borrowerTokenAccount = tokenAccounts.value[0].pubkey;
-      console.log('Using borrower token account:', borrowerTokenAccount.toString());
-
-      // Create the instruction
-      const instruction = await program.methods
-        .intializeAcceptLoan(
-          0 // bump (Anchor will handle this)
-        )
-        .accounts({
-          loanOffer: loanOfferPda,
-          loan: loanPda,
-          borrowerTokenAccount: borrowerTokenAccount,
-          vault: vaultPda,
-          borrower: selectedAccount.publicKey,
-          tokenMint: tokenMint,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SystemProgram.programId,
-          rent: SYSVAR_RENT_PUBKEY,
-          clock: SYSVAR_CLOCK_PUBKEY,
-        })
-        .instruction();
-
-      // Create and send transaction
-      const transaction = new Transaction();
-      transaction.add(instruction);
-
-      // Get latest blockhash
-      const { blockhash } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = selectedAccount.publicKey;
-
-      // Sign and send transaction using the wallet
-      const signedTransaction = await wallet?.signTransaction(transaction);
-      if (!signedTransaction) {
-        throw new Error('Failed to sign transaction');
-      }
-
-      const signature = await connection.sendRawTransaction(signedTransaction.serialize());
-      await connection.confirmTransaction(signature);
       
       console.log('Loan accepted! Signature:', signature);
       Alert.alert('Success', `Loan accepted! You can now borrow ${amount}`);
