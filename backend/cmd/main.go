@@ -19,8 +19,8 @@ func main() {
 	// --- Database Connection ---
 	mongoURI := os.Getenv("MONGO_URI")
 	if mongoURI == "" {
-		mongoURI = "mongodb://localhost:27017"
-		log.Println("MONGO_URI not set, defaulting to localhost.")
+		mongoURI = "mongodb://localhost:27018"
+		log.Println("MONGO_URI not set, defaulting to localhost:27018.")
 	}
 
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoURI))
@@ -54,8 +54,13 @@ func main() {
 	routes.SetupRoutes(router, app)
 
 	// --- Start Server ---
-	log.Println("Starting server on port 8080...")
-	if err := router.Run(":8080"); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	
+	log.Printf("Starting server on port %s...", port)
+	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

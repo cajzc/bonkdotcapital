@@ -3,16 +3,20 @@
 import { Platform } from 'react-native';
 import type { WebSocketMessage } from '../types/backend';
 
-// Use different IPs based on platform and device type
+// Use different WebSocket URLs based on environment and platform
 const getWsBaseUrl = () => {
   if (!__DEV__) {
-    return 'ws://your-production-server.com/api/v1/ws';
+    // Production WebSocket URL - Update this with your actual AWS deployment URL
+    return 'wss://your-aws-domain.com/api/v1/ws';
+    // Examples:
+    // return 'wss://api.bonkdotcapital.com/api/v1/ws';
+    // return 'ws://your-ec2-public-ip:8080/api/v1/ws';
+    // return 'wss://your-alb-dns-name.us-east-1.elb.amazonaws.com/api/v1/ws';
   }
   
   if (Platform.OS === 'android') {
     // For physical Android devices, use your computer's network IP
     // For Android emulator, use 10.0.2.2
-    // You can detect emulator vs physical device, but for now use network IP
     return 'ws://192.168.1.111:8080/api/v1/ws';
   } else {
     // For iOS simulator, web, or other platforms

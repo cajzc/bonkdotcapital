@@ -3,3 +3,4 @@ MANUAL_INSERT_GUIDE.md
 node_modules/
 package.json
 .claude
+backend/scripts/

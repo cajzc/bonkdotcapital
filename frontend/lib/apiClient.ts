@@ -10,16 +10,20 @@ import type {
   ApiError 
 } from '../types/backend';
 
-// Use different IPs based on platform and device type
+// Use different URLs based on environment and platform
 const getApiBaseUrl = () => {
   if (!__DEV__) {
-    return 'http://your-production-server.com/api/v1';
+    // Production URL - Update this with your actual AWS deployment URL
+    return 'https://your-aws-domain.com/api/v1';
+    // Examples:
+    // return 'https://api.bonkdotcapital.com/api/v1';
+    // return 'https://your-ec2-public-ip:8080/api/v1';
+    // return 'https://your-alb-dns-name.us-east-1.elb.amazonaws.com/api/v1';
   }
   
   if (Platform.OS === 'android') {
     // For physical Android devices, use your computer's network IP
     // For Android emulator, use 10.0.2.2
-    // You can detect emulator vs physical device, but for now use network IP
     return 'http://192.168.1.111:8080/api/v1';
   } else {
     // For iOS simulator, web, or other platforms
