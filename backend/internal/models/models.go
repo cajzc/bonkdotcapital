@@ -6,15 +6,22 @@ import (
 )
 
 type LoanOffer struct {
-	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	OfferAddress  string             `bson:"offer_address" json:"offer_address"` // On-chain address of the LoanOffer account
-	LenderAddress string             `bson:"lender_address" json:"lender_address"`
-	Amount        float64            `bson:"amount" json:"amount"`
-	APY           float64            `bson:"apy" json:"apy"`
-	Token         string             `bson:"token" json:"token"`
-	Duration      int64              `bson:"duration" json:"duration"`
-	IsActive      bool               `bson:"is_active" json:"is_active"`
-	CreatedAt     time.Time          `bson:"created_at" json:"created_at"`
+	ID               primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	OfferAddress     *string            `bson:"offer_address,omitempty" json:"offer_address,omitempty"` // On-chain address of the LoanOffer account
+	LenderAddress	 *string            `bson:"lender_address,omitempty" json:"lender_address,omitempty"`
+	Amount           *float64           `bson:"amount,omitempty" json:"amount,omitempty"`
+	APY              *float64           `bson:"apy,omitempty" json:"apy,omitempty"`
+	Token            *string            `bson:"token,omitempty" json:"token,omitempty"`
+	Duration         *int64             `bson:"duration,omitempty" json:"duration,omitempty"`
+	IsActive         *bool              `bson:"is_active,omitempty" json:"is_active,omitempty"`
+	CreatedAt        *time.Time         `bson:"created_at,omitempty" json:"created_at,omitempty"`
+	// New fields for mint addresses and names
+	LoanMint         *string            `bson:"loan_mint,omitempty" json:"loan_mint,omitempty"`
+	CollateralMint   *string            `bson:"collateral_mint,omitempty" json:"collateral_mint,omitempty"`
+	LoanName         *string            `bson:"loan_name,omitempty" json:"loan_name,omitempty"`
+	CollateralName   *string            `bson:"collateral_name,omitempty" json:"collateral_name,omitempty"`
+	LoanAmount       *float64           `bson:"loan_amount,omitempty" json:"loan_amount,omitempty"`
+	CollateralAmount *float64           `bson:"collateral_amount,omitempty" json:"collateral_amount,omitempty"`
 }
 
 type Comment struct {
@@ -45,16 +52,22 @@ type Loan struct {
 
 type LoanRequest struct {
 	ID               primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	RequestAddress   string             `bson:"request_address" json:"request_address"` // On-chain address of the LoanRequest account
-	BorrowerAddress  string             `bson:"borrower_address" json:"borrower_address"`
-	Amount           float64            `bson:"amount" json:"amount"`
-	MaxAPY           float64            `bson:"max_apy" json:"max_apy"`
-	Token            string             `bson:"token" json:"token"`
-	CollateralToken  string             `bson:"collateral_token" json:"collateral_token"`
-	CollateralAmount float64            `bson:"collateral_amount" json:"collateral_amount"`
-	Duration         int64              `bson:"duration" json:"duration"`
-	IsActive         bool               `bson:"is_active" json:"is_active"`
-	CreatedAt        time.Time          `bson:"created_at" json:"created_at"`
+	RequestAddress   *string            `bson:"request_address,omitempty" json:"request_address,omitempty"` // On-chain address of the LoanRequest account
+	BorrowerAddress  *string            `bson:"borrower_address,omitempty" json:"borrower_address,omitempty"`
+	Amount           *float64           `bson:"amount,omitempty" json:"amount,omitempty"`
+	MaxAPY           *float64           `bson:"max_apy,omitempty" json:"max_apy,omitempty"`
+	Token            *string            `bson:"token,omitempty" json:"token,omitempty"`
+	CollateralToken  *string            `bson:"collateral_token,omitempty" json:"collateral_token,omitempty"`
+	CollateralAmount *float64           `bson:"collateral_amount,omitempty" json:"collateral_amount,omitempty"`
+	Duration         *int64             `bson:"duration,omitempty" json:"duration,omitempty"`
+	IsActive         *bool              `bson:"is_active,omitempty" json:"is_active,omitempty"`
+	CreatedAt        *time.Time         `bson:"created_at,omitempty" json:"created_at,omitempty"`
+	// New fields for mint addresses and names
+	LoanMint         *string            `bson:"loan_mint,omitempty" json:"loan_mint,omitempty"`
+	CollateralMint   *string            `bson:"collateral_mint,omitempty" json:"collateral_mint,omitempty"`
+	LoanName         *string            `bson:"loan_name,omitempty" json:"loan_name,omitempty"`
+	CollateralName   *string            `bson:"collateral_name,omitempty" json:"collateral_name,omitempty"`
+	LoanAmount       *float64           `bson:"loan_amount,omitempty" json:"loan_amount,omitempty"`
 }
 
 type LenderStat struct {

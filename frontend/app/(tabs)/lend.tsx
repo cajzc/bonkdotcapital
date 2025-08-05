@@ -38,12 +38,40 @@ export default function LendScreen() {
   const [minTokenAmount, setMinTokenAmount] = useState('');
   const [minReputation, setMinReputation] = useState('');
   const [autoAccept, setAutoAccept] = useState(false);
+  
+  // New fields for mint addresses and names
+  const [loanMint, setLoanMint] = useState('');
+  const [collateralMint, setCollateralMint] = useState('');
+  const [loanName, setLoanName] = useState('');
+  const [collateralName, setCollateralName] = useState('');
 
 
 
-  const handleCreateOffer = () => {
-    // Handle create lending offer logic
-    console.log('Creating lending offer...');
+  const handleCreateOffer = async () => {
+    try {
+      const offerData = {
+        lender_address: 'test-lender-address', // TODO: Replace with actual wallet address
+        amount: parseFloat(lendingAmount) || 0,
+        apy: 10.5, // TODO: Add APY input field
+        token: selectedToken || 'SOL',
+        duration: 30, // TODO: Add duration input field
+        is_active: true,
+        // New fields (allow null values)
+        loan_mint: loanMint || null,
+        collateral_mint: collateralMint || null,
+        loan_name: loanName || null,
+        collateral_name: collateralName || null,
+        loan_amount: parseFloat(lendingAmount) || null,
+        collateral_amount: parseFloat(minTokenAmount) || null,
+      };
+      
+      console.log('Creating lending offer with data:', offerData);
+      // TODO: Uncomment when ready to send to backend
+      // const createdOffer = await apiClient.createLoanOffer(offerData);
+      // console.log('Offer created:', createdOffer);
+    } catch (error) {
+      console.error('Error creating offer:', error);
+    }
   };
 
   return (
@@ -110,6 +138,54 @@ export default function LendScreen() {
                 // Handle reputation selection
                 console.log('Select reputation');
               }}
+            />
+          </View>
+
+          {/* Loan Mint Address */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Loan Mint Address (Optional)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g., ksdDSFJer1nsdf..."
+              placeholderTextColor={Colors.textTertiary}
+              value={loanMint}
+              onChangeText={setLoanMint}
+            />
+          </View>
+
+          {/* Collateral Mint Address */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Collateral Mint Address (Optional)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g., jfQ48Ncmdf..."
+              placeholderTextColor={Colors.textTertiary}
+              value={collateralMint}
+              onChangeText={setCollateralMint}
+            />
+          </View>
+
+          {/* Loan Name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Loan Token Name (Optional)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g., BONK"
+              placeholderTextColor={Colors.textTertiary}
+              value={loanName}
+              onChangeText={setLoanName}
+            />
+          </View>
+
+          {/* Collateral Name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Collateral Token Name (Optional)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g., SOL"
+              placeholderTextColor={Colors.textTertiary}
+              value={collateralName}
+              onChangeText={setCollateralName}
             />
           </View>
 

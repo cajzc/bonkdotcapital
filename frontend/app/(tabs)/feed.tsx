@@ -58,15 +58,38 @@ const RequestCard: React.FC<RequestCardProps> = ({
   
   if (!data) return null;
   
-  // Extract data based on type
-  const username = isLending ? shortenAddress(offer!.lender_address) : shortenAddress(request!.borrower_address);
-  const amount = `${formatNumber(data.amount)} BONK`;
-  const collateral = isLending ? offer!.token : `${formatNumber(request!.collateral_amount)} ${request!.collateral_token}`;
-  const apy = isLending ? offer!.apy.toFixed(1) : request!.max_apy.toFixed(1);
-  const duration = formatDuration(data.duration);
+  // Extract data based on type with safe nullable handling
+  const username = isLending 
+    ? shortenAddress(offer?.lender_address || 'Unknown')
+    : shortenAddress(request?.borrower_address || 'Unknown');
+  
+  // Use new fields with fallbacks to old fields, all nullable-safe
+  const loanAmount = isLending 
+    ? (offer?.loan_amount || offer?.amount || 0)
+    : (request?.loan_amount || request?.amount || 0);
+  const loanName = isLending 
+    ? (offer?.loan_name || 'BONK')
+    : (request?.loan_name || 'BONK');
+  const amount = `${formatNumber(loanAmount)} ${loanName}`;
+  
+  const collateralAmount = isLending 
+    ? (offer?.collateral_amount || 0)
+    : (request?.collateral_amount || 0);
+  const collateralName = isLending 
+    ? (offer?.collateral_name || offer?.token || 'Unknown')
+    : (request?.collateral_name || request?.collateral_token || 'Unknown');
+  const collateral = collateralAmount > 0 
+    ? `${formatNumber(collateralAmount)} ${collateralName}`
+    : collateralName;
+  
+  const apy = isLending 
+    ? (offer?.apy || 0).toFixed(1) 
+    : (request?.max_apy || 0).toFixed(1);
+  const duration = formatDuration(isLending ? (offer?.duration || 0) : (request?.duration || 0));
+  const isActive = isLending ? (offer?.is_active ?? false) : (request?.is_active ?? false);
   const description = isLending 
-    ? `${offer!.is_active ? 'Active' : 'Inactive'} lending offer • Collateral: ${offer!.token}`
-    : `${request!.is_active ? 'Active' : 'Inactive'} borrowing request • Collateral: ${request!.collateral_token}`;
+    ? `${isActive ? 'Active' : 'Inactive'} lending offer • Collateral: ${collateralName}`
+    : `${isActive ? 'Active' : 'Inactive'} borrowing request • Collateral: ${collateralName}`;
   
   return (
     <View style={styles.requestCard}>
