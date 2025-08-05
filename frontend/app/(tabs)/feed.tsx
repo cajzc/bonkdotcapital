@@ -1,3 +1,5 @@
+global.Buffer = require('buffer').Buffer;
+
 import React, { useState } from 'react';
 import {
   View,
@@ -16,7 +18,7 @@ import ConnectButton from '@/components/ConnectButton';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSolanaProgram } from '../../lib/Solana';
-import { acceptLoan, payLoan, LoanOfferData, PayLoanData } from '../../lib/instructions/CreateLoan';
+import { takeLoan, TakeLoanData } from '../../lib/instructions/TakeLoan';
 
 interface RequestCardProps {
   userImage: string;
@@ -46,48 +48,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
   const isLending = type === 'Lending';
   const { selectedAccount } = useAuthorization();
   const { connection, wallet, program } = useSolanaProgram();
-  const [isPaying, setIsPaying] = useState(false);
   const [isBorrowing, setIsBorrowing] = useState(false);
-
-  const handlePayLoan = async () => {
-    if (!connection || !wallet || !program) {
-      Alert.alert('Error', 'Solana connection or program not available. Please try again.');
-      return;
-    }
-
-    if (!selectedAccount?.publicKey) {
-      Alert.alert('Error', 'Please connect your wallet first');
-      return;
-    }
-
-    setIsPaying(true);
-    try {
-      // For demo purposes, we'll use placeholder values
-      // In a real app, you'd get these from the selected loan
-      const payLoanData: PayLoanData = {
-        tokenMint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', // BONK token mint
-        lenderPublicKey: '11111111111111111111111111111111', // Placeholder lender
-        borrowerPublicKey: selectedAccount.publicKey.toString(),
-      };
-
-      const signature = await payLoan(
-        program,
-        connection,
-        wallet,
-        selectedAccount.publicKey,
-        payLoanData
-      );
-
-      Alert.alert('Success', `Loan paid! Signature: ${signature}`);
-      console.log('Loan paid!', signature);
-
-    } catch (error: any) {
-      console.error('Error paying loan:', error);
-      Alert.alert('Error', `Failed to pay loan: ${error?.message || 'Unknown error'}`);
-    } finally {
-      setIsPaying(false);
-    }
-  };
 
   const handleBorrow = async () => {
     if (!connection || !wallet || !program) {
@@ -102,28 +63,27 @@ const RequestCard: React.FC<RequestCardProps> = ({
 
     setIsBorrowing(true);
     try {
-      // For demo purposes, we'll use placeholder values
-      // In a real app, you'd get these from the selected loan offer
-      const loanOfferData: LoanOfferData = {
-        tokenMint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', // BONK token mint
-        lenderPublicKey: '11111111111111111111111111111111', // Placeholder lender
+      // TODO: hardcoded - replace with actual loan offer data from the selected offer
+      const takeLoanData: TakeLoanData = {
+        tokenMint: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', // TODO: hardcoded - should be the token mint from the selected loan offer
+        lenderPublicKey: '6eomfGH6F4ovsd1FN6ccwfpt6uwzeL6rcLyD2HBYVpfm', // TODO: hardcoded - should be the lender's public key from the selected loan offer
         amount: amount,
       };
 
-      const signature = await acceptLoan(
+      const signature = await takeLoan(
         program,
         connection,
         wallet,
         selectedAccount.publicKey,
-        loanOfferData
+        takeLoanData
       );
       
-      console.log('Loan accepted! Signature:', signature);
-      Alert.alert('Success', `Loan accepted! You can now borrow ${amount}`);
+      console.log('Loan taken! Signature:', signature);
+      Alert.alert('Success', `Loan taken! You can now borrow ${amount}`);
 
     } catch (error: any) {
-      console.error('Error accepting loan:', error);
-      Alert.alert('Error', `Failed to accept loan: ${error?.message || 'Unknown error'}`);
+      console.error('Error taking loan:', error);
+      Alert.alert('Error', `Failed to take loan: ${error?.message || 'Unknown error'}`);
     } finally {
       setIsBorrowing(false);
     }
@@ -172,33 +132,22 @@ const RequestCard: React.FC<RequestCardProps> = ({
           <Ionicons name="chatbubble-outline" size={16} color={Colors.textSecondary} />
           <Text style={styles.commentsCount}>{comments}</Text>
         </View>
-        <View style={styles.buttonContainer}>
-          {!isLending && (
-            <TouchableOpacity 
-              style={[styles.payLoanButton, isPaying && styles.payLoanButtonDisabled]}
-              onPress={handlePayLoan}
-              disabled={isPaying}
-            >
-              <Text style={styles.payLoanButtonText}>
-                {isPaying ? 'Paying...' : 'Pay Loan'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {isLending && (
-            <TouchableOpacity 
-              style={[styles.borrowButton, isBorrowing && styles.borrowButtonDisabled]}
-              onPress={handleBorrow}
-              disabled={isBorrowing}
-            >
-              <Text style={styles.borrowButtonText}>
-                {isBorrowing ? 'Borrowing...' : 'Borrow'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={styles.viewDetailsButton}>
-            <Text style={styles.viewDetailsText}>View Details</Text>
-          </TouchableOpacity>
-        </View>
+                 <View style={styles.buttonContainer}>
+           {isLending && (
+             <TouchableOpacity 
+               style={[styles.borrowButton, isBorrowing && styles.borrowButtonDisabled]}
+               onPress={handleBorrow}
+               disabled={isBorrowing}
+             >
+               <Text style={styles.borrowButtonText}>
+                 {isBorrowing ? 'Borrowing...' : 'Borrow'}
+               </Text>
+             </TouchableOpacity>
+           )}
+           <TouchableOpacity style={styles.viewDetailsButton}>
+             <Text style={styles.viewDetailsText}>View Details</Text>
+           </TouchableOpacity>
+         </View>
       </View>
     </View>
   );

@@ -1,3 +1,5 @@
+global.Buffer = require('buffer').Buffer;
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -15,7 +17,7 @@ import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSolanaProgram } from '../../lib/Solana';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
-import { getUserTokenAccounts, TokenInfo, getTokenSymbol } from '../../lib/tokenUtils';
+import { getUserTokenAccounts, TokenInfo, getTokenSymbol } from '../../lib/TokenUtils';
 import { RPC_ENDPOINT } from '@/constants/RpcConnection';
 import { createLoanOffer } from '../../lib/instructions/CreateLoan';
 import { Connection } from '@solana/web3.js';

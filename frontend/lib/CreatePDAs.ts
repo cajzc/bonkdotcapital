@@ -1,3 +1,5 @@
+global.Buffer = require('buffer').Buffer;
+
 import { PublicKey } from "@solana/web3.js";
 
 export function createLoanOfferPDA(lender: PublicKey, tokenMint: PublicKey, programId: PublicKey): PublicKey {

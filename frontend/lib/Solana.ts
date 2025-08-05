@@ -1,3 +1,5 @@
+global.Buffer = require('buffer').Buffer;
+
 import { Connection, Transaction, PublicKey } from "@solana/web3.js";
 import { useMemo } from "react";
 import {

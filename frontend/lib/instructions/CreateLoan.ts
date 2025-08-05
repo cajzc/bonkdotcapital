@@ -1,7 +1,8 @@
+global.Buffer = require('buffer').Buffer;
+
 import { Connection, PublicKey, Transaction, SystemProgram, SYSVAR_RENT_PUBKEY, SYSVAR_CLOCK_PUBKEY } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
 import { BN } from '@coral-xyz/anchor';
-import { Buffer } from 'buffer';
 import { Program } from '@coral-xyz/anchor';
 
 // Types for loan operations

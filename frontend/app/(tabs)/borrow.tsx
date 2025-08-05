@@ -1,3 +1,5 @@
+global.Buffer = require('buffer').Buffer;
+
 import React, { useState } from 'react';
 import {
   View,
@@ -16,7 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PublicKey } from '@solana/web3.js';
 import { useSolanaProgram } from '../../lib/Solana';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
-import { Buffer } from 'buffer';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
+
 
 interface DropdownProps {
   placeholder: string;
@@ -99,12 +102,20 @@ export default function BorrowScreen() {
         program.programId
       );
 
+      // Find the borrower's token account for the mint
+      const borrowerTokenAccount = await getAssociatedTokenAddress(
+        tokenMint,
+        selectedAccount.publicKey,
+        false 
+      );
+      console.log('Borrower token account:', borrowerTokenAccount.toString());
+
       const txSignature = await program.methods
         .intializeAcceptLoan(bump)
         .accounts({
           loanOffer: loanOfferPda,
           loan: loanPda,
-          borrowerTokenAccount: selectedAccount.publicKey, // You'll need the actual token account
+          borrowerTokenAccount: borrowerTokenAccount, 
           vault: vaultPda,
           borrower: selectedAccount.publicKey,
           tokenMint: tokenMint,
