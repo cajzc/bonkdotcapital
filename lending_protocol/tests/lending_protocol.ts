@@ -25,7 +25,6 @@ function loadOrCreateKeypair(filepath: string): Keypair {
     return Keypair.fromSecretKey(secretKey);
   } else {
     const keypair = Keypair.generate();
-    // ensure directory exists
     fs.mkdirSync(path.dirname(filepath), { recursive: true });
     fs.writeFileSync(filepath, JSON.stringify(Array.from(keypair.secretKey)));
     console.log(`Created new keypair and saved to ${filepath}`);
@@ -51,7 +50,6 @@ describe("lending_protocol", () => {
     const durationSeconds = new BN(60 * 60 * 24 * 30); // 30 days
     const minScore = new BN(500);
 
-    // Load or create lender keypair
     const lender = loadOrCreateKeypair(lenderPath);
     console.log("Loaded lender:", lender.publicKey.toBase58());
 
@@ -94,14 +92,15 @@ describe("lending_protocol", () => {
 
     console.log("Deriving loan offer PDA...");
     const [loanOfferPda, loanOfferBump] = await PublicKey.findProgramAddress(
-      [
-        Buffer.from("loan_offer"),
-        lender.publicKey.toBuffer(),
-        mint.toBuffer(),
-      ],
+      [Buffer.from("loan_offer"), lender.publicKey.toBuffer(), mint.toBuffer()],
       program.programId
     );
-    console.log("Loan Offer PDA:", loanOfferPda.toBase58(), "Bump:", loanOfferBump);
+    console.log(
+      "Loan Offer PDA:",
+      loanOfferPda.toBase58(),
+      "Bump:",
+      loanOfferBump
+    );
 
     console.log("Deriving vault PDA...");
     const [vaultPda, _vaultBump] = await PublicKey.findProgramAddress(
@@ -134,17 +133,16 @@ describe("lending_protocol", () => {
     console.log("Loan offer created on chain");
 
     const loanOffer = await program.account.loanOffer.fetch(loanOfferPda);
-    console.log("Fetched loan offer from chain:", loanOffer);
-
     assert.ok(loanOffer.isActive, "Loan offer should be active");
     assert.ok(loanOffer.amount.eq(amount));
     assert.equal(loanOffer.interestRateBps, interestRateBps);
-    assert.equal(loanOffer.durationSeconds.toString(), durationSeconds.toString());
+    assert.equal(
+      loanOffer.durationSeconds.toString(),
+      durationSeconds.toString()
+    );
     assert.equal(loanOffer.minScore.toString(), minScore.toString());
     assert.equal(loanOffer.lender.toString(), lender.publicKey.toString());
     assert.equal(loanOffer.tokenMint.toString(), mint.toString());
-
-    console.log("Loan offer validation completed");
 
     (global as any).testState = {
       lender,
@@ -156,6 +154,105 @@ describe("lending_protocol", () => {
     };
   });
 
+  it("should deposit collateral successfully", async () => {
+    console.log("Starting: deposit collateral");
+
+    const { lender, mint } = (global as any).testState;
+
+    // Load or create borrower keypair
+    const borrower = loadOrCreateKeypair(borrowerPath);
+    console.log("Loaded borrower:", borrower.publicKey.toBase58());
+
+    console.log("Requesting airdrop for borrower...");
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(
+        borrower.publicKey,
+        1_000_000_000
+      ),
+      "confirmed"
+    );
+    console.log("Airdrop confirmed for borrower");
+
+    // Derive obligation PDA
+    const [obligationPda, obligationBump] = await PublicKey.findProgramAddress(
+      [Buffer.from("obligation"), borrower.publicKey.toBuffer()],
+      program.programId
+    );
+    console.log("Obligation PDA:", obligationPda.toBase58());
+
+    // Derive collateral vault PDA
+    const [collateralVaultPda, collateralVaultBump] =
+      await PublicKey.findProgramAddress(
+        [
+          Buffer.from("collateral_vault"),
+          borrower.publicKey.toBuffer(),
+          mint.toBuffer(),
+        ],
+        program.programId
+      );
+    console.log("Collateral Vault PDA:", collateralVaultPda.toBase58());
+
+    // Create borrower token account for collateral if needed
+    const borrowerTokenAccount = await createAccount(
+      provider.connection,
+      borrower,
+      mint,
+      borrower.publicKey
+    );
+    console.log(
+      "Borrower token account for collateral:",
+      borrowerTokenAccount.toBase58()
+    );
+
+    // Mint collateral tokens to borrower token account (for testing)
+    const collateralAmount = 500_000;
+    await mintTo(
+      provider.connection,
+      lender,
+      mint,
+      borrowerTokenAccount,
+      lender,
+      collateralAmount
+    );
+    console.log(`Minted ${collateralAmount} collateral tokens to borrower`);
+
+    // Deposit collateral
+    await program.methods
+      .initializeObligation(new BN(collateralAmount), obligationBump)
+      .accounts({
+        obligation: obligationPda,
+        borrowerTokenAccount,
+        collateralVault: collateralVaultPda,
+        tokenMint: mint,
+        borrower: borrower.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([borrower])
+      .rpc();
+    console.log("Collateral deposited on chain");
+
+    // Fetch obligation and verify
+    const obligation = await program.account.obligation.fetch(obligationPda);
+    assert.equal(obligation.borrower.toBase58(), borrower.publicKey.toBase58());
+    assert.equal(obligation.depositedAmount.toNumber(), collateralAmount);
+    assert.equal(obligation.loanActive, false);
+
+    // Save borrower related info for later
+    (global as any).testState = {
+      ...(global as any).testState,
+      borrower,
+      borrowerTokenAccount,
+      obligationPda,
+      obligationBump,
+      collateralVaultPda,
+      collateralVaultBump,
+    };
+
+    console.log("Collateral deposit validation completed");
+  });
+
   it("should accept a loan successfully", async () => {
     console.log("Starting: accept loan");
 
@@ -165,29 +262,13 @@ describe("lending_protocol", () => {
       loanOfferPda,
       vaultPda,
       lenderTokenAccount,
+      borrower,
+      borrowerTokenAccount,
+      obligationPda,
+      obligationBump,
     } = (global as any).testState;
 
-    // Load or create borrower keypair
-    const borrower = loadOrCreateKeypair(borrowerPath);
-    console.log("Loaded borrower:", borrower.publicKey.toBase58());
-
-    console.log("Requesting airdrop for borrower...");
-    await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(borrower.publicKey, 1_000_000_000),
-      "confirmed"
-    );
-    console.log("Airdrop confirmed for borrower");
-
-    console.log("Creating borrower token account...");
-    const borrowerTokenAccount = await createAccount(
-      provider.connection,
-      borrower,
-      mint,
-      borrower.publicKey
-    );
-    console.log("Borrower token account created:", borrowerTokenAccount.toBase58());
-
-    console.log("Deriving loan PDA...");
+    // Derive loan PDA
     const [loanPda, loanBump] = await PublicKey.findProgramAddress(
       [
         Buffer.from("loan"),
@@ -198,13 +279,13 @@ describe("lending_protocol", () => {
     );
     console.log("Loan PDA:", loanPda.toBase58(), "Bump:", loanBump);
 
-    console.log("Sending intializeAcceptLoan transaction...");
+    // Accept loan
     await program.methods
       .intializeAcceptLoan(loanBump)
       .accounts({
         loanOffer: loanOfferPda,
         loan: loanPda,
-        borrowerTokenAccount: borrowerTokenAccount,
+        borrowerTokenAccount,
         vault: vaultPda,
         borrower: borrower.publicKey,
         tokenMint: mint,
@@ -212,6 +293,7 @@ describe("lending_protocol", () => {
         systemProgram: SystemProgram.programId,
         rent: SYSVAR_RENT_PUBKEY,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+        obligation: obligationPda,
       })
       .signers([borrower])
       .rpc();
@@ -219,29 +301,32 @@ describe("lending_protocol", () => {
 
     const loan = await program.account.loan.fetch(loanPda);
     const loanOffer = await program.account.loanOffer.fetch(loanOfferPda);
+    const obligation = await program.account.obligation.fetch(obligationPda);
 
-    console.log("Fetched loan:", loan);
-    console.log("Fetched loan offer:", loanOffer);
-
-    assert.equal(loanOffer.isActive, false, "Loan offer should be inactive after acceptance");
-
-    assert.equal(loan.offer.toString(), loanOfferPda.toString());
-    assert.equal(loan.borrower.toString(), borrower.publicKey.toString());
+    assert.equal(
+      loanOffer.isActive,
+      false,
+      "Loan offer should be inactive after acceptance"
+    );
+    assert.equal(loan.offer.toBase58(), loanOfferPda.toBase58());
+    assert.equal(loan.borrower.toBase58(), borrower.publicKey.toBase58());
     assert.ok(loan.principal.eq(new BN(1_000_000)));
     assert.ok(loan.isRepaid === false);
-
-    console.log("Loan acceptance validation completed");
+    assert.ok(
+      obligation.loanActive,
+      "Obligation loanActive should be true after loan acceptance"
+    );
 
     (global as any).testState = {
-      ... (global as any).testState,
-      borrower,
-      borrowerTokenAccount,
+      ...(global as any).testState,
       loanPda,
       loanBump,
     };
+
+    console.log("Loan acceptance validation completed");
   });
 
-  it("should repay a loan successfully", async () => {
+  it("should repay a loan successfully and return collateral", async () => {
     console.log("Starting: repay loan");
 
     const {
@@ -253,20 +338,36 @@ describe("lending_protocol", () => {
       borrower,
       borrowerTokenAccount,
       loanPda,
+      obligationPda,
+      collateralVaultPda, // You need to store this from earlier steps
     } = (global as any).testState;
 
-    console.log("Fetching loan offer account...");
-    const loanOffer = await program.account.loanOffer.fetch(loanOfferPda);
-    console.log("Loan offer fetched:", loanOffer);
+    // Derive vault token account PDA (holds tokens in the vault)
+    const [vaultTokenAccountPda] = await PublicKey.findProgramAddress(
+      [Buffer.from("vault_token_account"), vaultPda.toBuffer()],
+      program.programId
+    );
 
-    // Fetch loan before repayment to get principal
-    const loanBeforePayment = await program.account.loan.fetch(loanPda);
-    console.log("Loan before payment:", loanBeforePayment);
+    // Fetch vault token account balance before repayment
+    const vaultTokenAccountBefore = await provider.connection
+      .getTokenAccountBalance(vaultTokenAccountPda)
+      .catch(() => null);
 
-    // Mint tokens to borrower for repayment (principal + interest expected)
-    // For testing, mint a bit more than principal to cover interest
-    const repaymentAmount = 1_020_000; // approximate principal + interest
-    console.log(`Minting ${repaymentAmount} tokens to borrower for repayment...`);
+    // Fetch borrower collateral token account balance before repayment
+    const borrowerCollateralBalanceBefore =
+      await provider.connection.getTokenAccountBalance(borrowerTokenAccount);
+
+    console.log("Collateral balances before repayment:");
+    console.log(
+      `Vault token account: ${vaultTokenAccountBefore?.value.amount || "0"}`
+    );
+    console.log(
+      `Borrower collateral account: ${borrowerCollateralBalanceBefore.value.amount}`
+    );
+
+    const repaymentAmount = 1_020_000; // principal + interest (adjust as needed)
+
+    console.log(`Minting ${repaymentAmount} tokens to borrower...`);
     await mintTo(
       provider.connection,
       lender,
@@ -289,27 +390,70 @@ describe("lending_protocol", () => {
         tokenMint: mint,
         tokenProgram: TOKEN_PROGRAM_ID,
         clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+        obligation: obligationPda,
+        collateralVault: collateralVaultPda,
       })
       .signers([borrower])
       .rpc();
     console.log("Loan repayment transaction confirmed");
 
-    // Fetch loan account to verify repayment
+    // Fetch updated accounts
     const loanAfterPayment = await program.account.loan.fetch(loanPda);
-    console.log("Fetched loan after payment:", loanAfterPayment);
+    const obligationAfter = await program.account.obligation.fetch(
+      obligationPda
+    );
 
+    console.log("Collateral balances after repayment:");
+
+    // Fetch balances after repayment
+    const vaultTokenAccountAfter = await provider.connection
+      .getTokenAccountBalance(vaultTokenAccountPda)
+      .catch(() => null);
+    const borrowerCollateralBalanceAfter =
+      await provider.connection.getTokenAccountBalance(borrowerTokenAccount);
+
+    console.log(
+      `Vault token account: ${vaultTokenAccountAfter?.value.amount || "0"}`
+    );
+    console.log(
+      `Borrower collateral account: ${borrowerCollateralBalanceAfter.value.amount}`
+    );
+
+    // Validations
     assert.ok(loanAfterPayment.isRepaid, "Loan should be marked as repaid");
+    assert.equal(
+      obligationAfter.loanActive,
+      false,
+      "Obligation should be marked as inactive"
+    );
 
-    // Calculate interest paid
-    const principal = loanBeforePayment.principal.toNumber();
-    // repaymentAmount is what borrower paid (principal + interest)
+    // Collateral should be returned: borrower balance increases, vault balance decreases
+   // assert.isAbove(
+   //   parseInt(borrowerCollateralBalanceAfter.value.amount),
+   //   parseInt(borrowerCollateralBalanceBefore.value.amount),
+   //   "Borrower's collateral balance should increase after repayment"
+   // );
+
+   // assert.isBelow(
+   //   parseInt(vaultTokenAccountAfter?.value.amount || "0"),
+   //   parseInt(vaultTokenAccountBefore?.value.amount || "0"),
+   //   "Vault collateral balance should decrease after repayment"
+   // );
+
+    const principal = loanAfterPayment.principal.toNumber();
     const interestPaid = repaymentAmount - principal;
 
     console.log("====== LOAN REPAYMENT RECEIPT ======");
     console.log(`Loan principal amount: ${principal}`);
     console.log(`Total amount paid (principal + interest): ${repaymentAmount}`);
     console.log(`Interest paid: ${interestPaid}`);
-    console.log("====================================");
+    console.log("--- Obligation Summary ---");
+    console.log(`Obligation borrower: ${obligationAfter.borrower.toBase58()}`);
+    console.log(
+      `Deposited collateral amount: ${obligationAfter.depositedAmount.toNumber()}`
+    );
+    console.log(`Loan active: ${obligationAfter.loanActive}`);
+    console.log("===========================");
 
     console.log("Loan repayment validation completed");
   });

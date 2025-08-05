@@ -24,4 +24,6 @@ pub enum Errors {
     LoanRepaymentOverdue,
     #[msg("Math overflow occurred")]
     MathOverflow,
+    #[msg("Borrower already has an active loan.")]
+    LoanAlreadyExists,
 }

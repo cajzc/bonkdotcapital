@@ -1,5 +1,5 @@
-pub mod flash_loan;
 pub mod loan;
+pub mod obligation;
 
-pub use flash_loan::*;
 pub use loan::*;
+pub use obligation::*;

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("ABwKxzDC6curXT297iNKy4XGvZTiN3NeCVsWAZxJfMGi");
+declare_id!("EgGEeoSmoZCBZdfyiTCFbPqhSABeFnWhUN6NqiUZEjH4");
 
 pub mod errors;
 pub mod instructions;
@@ -33,6 +33,14 @@ pub mod lending_protocol {
             min_score,
             bump,
         )
+    }
+
+    pub fn initialize_obligation(
+        ctx: Context<DepositCollateral>,
+        amount: u64,
+        bump: u8,
+    ) -> Result<()> {
+        deposit_collateral(ctx, amount, bump)
     }
 
     pub fn intialize_accept_loan(ctx: Context<AcceptLoan>, bump: u8) -> Result<()> {

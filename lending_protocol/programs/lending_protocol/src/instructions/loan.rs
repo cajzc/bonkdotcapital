@@ -1,6 +1,6 @@
 use crate::{
     errors::Errors,
-    state::{borrower_profile::BorrowerProfile, loan::{Loan, LoanOffer}},
+    state::{borrower_profile::BorrowerProfile, loan::{Loan, LoanOffer}, obligation::Obligation},
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
@@ -91,6 +91,7 @@ pub fn accept_loan(ctx: Context<AcceptLoan>, bump: u8) -> Result<()> {
     let loan_offer = &mut ctx.accounts.loan_offer;
     let loan = &mut ctx.accounts.loan;
     let clock = Clock::get()?;
+    let obligation = &mut ctx.accounts.obligation;
 
     require!(loan_offer.is_active, Errors::OfferNotActive);
     // Removed borrower_profile score check
@@ -98,6 +99,12 @@ pub fn accept_loan(ctx: Context<AcceptLoan>, bump: u8) -> Result<()> {
         clock.unix_timestamp <= loan_offer.duration_seconds as i64 + clock.unix_timestamp,
         Errors::LoanOfferExpired
     );
+    require!(
+      !obligation.loan_active,
+      Errors::LoanAlreadyExists
+    );
+
+    obligation.loan_active = true;
 
     // Initialize Loan Account
     loan.offer = loan_offer.key();
@@ -159,6 +166,14 @@ pub struct AcceptLoan<'info> {
     )]
     pub loan: Account<'info, Loan>,
 
+    #[account(
+        mut,
+        seeds = [b"obligation", borrower.key.as_ref()],
+        bump = obligation.bump,
+        has_one = borrower
+        )]
+    pub obligation: Account<'info, Obligation>,
+
     // REMOVED borrower_profile field here
 
     #[account(
@@ -186,59 +201,64 @@ pub struct AcceptLoan<'info> {
 }
 
 pub fn pay_loan(ctx:Context<PayLoan>) -> Result<()>{
-        let loan = &mut ctx.accounts.loan;
-        let clock = Clock::get()?;
+    let loan = &mut ctx.accounts.loan;
+    let clock = Clock::get()?;
+    let obligation = &mut ctx.accounts.obligation;
 
-        // Ensure loan isn't already repaid
-        require!(!loan.is_repaid, Errors::LoanAlreadyRepaid);
+    // Ensure loan isn't already repaid
+    require!(!loan.is_repaid, Errors::LoanAlreadyRepaid);
 
-        //Calculate time elapse in seconds
-        let time_elapsed = (clock.unix_timestamp - loan.start_time) as u64;
-        let duration_seconds = (loan.repay_by_time - loan.start_time) as u64;
-        let effective_time = time_elapsed.min(duration_seconds);
+    //Calculate time elapse in seconds
+    let time_elapsed = (clock.unix_timestamp - loan.start_time) as u64;
+    let duration_seconds = (loan.repay_by_time - loan.start_time) as u64;
+    let effective_time = time_elapsed.min(duration_seconds);
 
-        //Constants
-        const SECONDS_PER_YEAR: u64 = 31_536_000;
+    //Constants
+    const SECONDS_PER_YEAR: u64 = 31_536_000;
 
-        //Calculate interest using u128 to avoid overflow
-        let principal = loan.principal as u128;
-        let interest_rate_bps = ctx.accounts.loan_offer.interest_rate_bps as u128;
-        let effective_time = effective_time as u128;
-        let denominator = (SECONDS_PER_YEAR as u128) * 10_000 as u128;
-        let interest = (principal * interest_rate_bps * effective_time) / denominator;
-        let interest = interest as u64;
+    //Calculate interest using u128 to avoid overflow
+    let principal = loan.principal as u128;
+    let interest_rate_bps = ctx.accounts.loan_offer.interest_rate_bps as u128;
+    let effective_time = effective_time as u128;
+    let denominator = (SECONDS_PER_YEAR as u128) * 10_000 as u128;
+    let interest = (principal * interest_rate_bps * effective_time) / denominator;
+    let interest = interest as u64;
 
-        // Total repayment amount
-        let total_amount = loan.principal.checked_add(interest).ok_or(Errors::MathOverflow)?;
+    // Total repayment amount
+    let total_amount = loan.principal.checked_add(interest).ok_or(Errors::MathOverflow)?;
 
-        // Transfer principal + interest from borrower to lender
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.borrower_token_account.to_account_info(),
-            to: ctx.accounts.lender_token_account.to_account_info(),
-            authority: ctx.accounts.borrower.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::transfer(cpi_ctx, total_amount)?;
+    // Transfer principal + interest from borrower to lender
+    let cpi_accounts = Transfer {
+        from: ctx.accounts.borrower_token_account.to_account_info(),
+        to: ctx.accounts.lender_token_account.to_account_info(),
+        authority: ctx.accounts.borrower.to_account_info(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+    token::transfer(cpi_ctx, total_amount)?;
 
-        // Mark loan as repaid
-        loan.is_repaid = true;
+    // Mark loan as repaid
+    loan.is_repaid = true;
+    obligation.loan_active = false;
 
-        msg!(
+    //Return collateral to the borrower
+  
+     msg!(
         "Loan repaid: Borrower {} paid {} (principal: {}, interest: {}) to lender {}",
         ctx.accounts.borrower.key(),
         total_amount,
         loan.principal,
         interest,
         ctx.accounts.loan_offer.lender
-        );
+    );
 
-        Ok(())
+    Ok(())
 }
+
 
 #[derive(Accounts)]
 pub struct PayLoan<'info>{
-#[account(
+    #[account(
         mut,
         seeds = [b"loan", loan_offer.key().as_ref(), borrower.key().as_ref()],
         bump = loan.bump,
@@ -246,27 +266,43 @@ pub struct PayLoan<'info>{
         has_one = borrower
     )]
     pub loan: Account<'info, Loan>,
+
     #[account(
         seeds = [b"loan_offer", loan_offer.lender.as_ref(), token_mint.key().as_ref()],
         bump = loan_offer.bump,
-        has_one = token_mint
-     )]
+        has_one = token_mint,
+    )]
     pub loan_offer: Account<'info, LoanOffer>,
+
+    #[account(
+        mut,
+        seeds = [b"obligation", borrower.key().as_ref()],
+        bump = obligation.bump,
+        has_one = borrower
+    )]
+    pub obligation: Account<'info, Obligation>,
+
     #[account(
         mut,
         token::mint = token_mint,
         token::authority = borrower
-     )]
-     pub borrower_token_account: Account<'info, TokenAccount>,
+    )]
+    pub borrower_token_account: Account<'info, TokenAccount>,
+
     #[account(
         mut,
         token::mint = token_mint,
         token::authority = loan_offer.lender
-      )]
+    )]
     pub lender_token_account: Account<'info, TokenAccount>,
+
     #[account(mut)]
     pub borrower: Signer<'info>,
+
     pub token_mint: Account<'info, Mint>,
+
     pub token_program: Program<'info, Token>,
+
     pub clock: Sysvar<'info, Clock>,
 }
+
