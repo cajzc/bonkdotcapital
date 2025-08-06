@@ -73,9 +73,7 @@ export async function takeLoan(
   // Create the instruction
   console.log('Creating instruction...');
   const instruction = await program.methods
-    .takeLoan(
-      new BN(parseFloat(takeLoanData.amount) * Math.pow(10, 6)) // amount
-    )
+    .takeLoan()
     .accounts({
       openLoan: openLoanPda,
       collateralVault: collateralVaultPda,

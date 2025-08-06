@@ -37,6 +37,7 @@ export default function LendScreen() {
   const [interestRate, setInterestRate] = useState('5'); // Default 5%
   const [durationDays, setDurationDays] = useState('30'); // Default 30 days
   const [minScore, setMinScore] = useState('0'); // Default 0
+  const [collateralAmount, setCollateralAmount] = useState(''); // New field for collateral amount
 
   // Create connection once, not on every render
   const connection = React.useMemo(() => new Connection(RPC_ENDPOINT), []);
@@ -116,6 +117,11 @@ export default function LendScreen() {
       return;
     }
 
+    if (!collateralAmount || parseFloat(collateralAmount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid collateral amount');
+      return;
+    }
+
     if (!program || !connection || !wallet) {
       Alert.alert('Error', 'Solana program not available. Please try again.');
       return;
@@ -139,7 +145,8 @@ export default function LendScreen() {
         selectedReceiveToken,
         interestRate,
         durationDays,
-        minScore
+        minScore,
+        collateralAmount
       );
       
       console.log('Transaction signature:', signature);
@@ -152,6 +159,7 @@ export default function LendScreen() {
       setInterestRate('5');
       setDurationDays('30');
       setMinScore('0');
+      setCollateralAmount('');
 
     } catch (error: any) {
       console.error('Error creating loan offer:', error);
@@ -323,6 +331,21 @@ export default function LendScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              Collateral Amount {selectedReceiveToken ? `(${selectedReceiveToken})` : ''}
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder={selectedReceiveToken ? `e.g., 1000` : "Select collateral token first"}
+              placeholderTextColor={Colors.textTertiary}
+              value={collateralAmount}
+              onChangeText={setCollateralAmount}
+              keyboardType="numeric"
+              editable={!!selectedReceiveToken}
+            />
           </View>
         </View>
 

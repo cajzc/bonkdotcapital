@@ -29,7 +29,8 @@ export async function createLoanOffer(
   selectedReceiveToken: string,
   interestRate: string,
   durationDays: string,
-  minScore: string
+  minScore: string,
+  collateralAmount: string
 ): Promise<string> {
   const amount = parseFloat(lendingAmount);
   if (isNaN(amount) || amount <= 0) {
@@ -49,6 +50,11 @@ export async function createLoanOffer(
   const minScoreValue = parseFloat(minScore);
   if (isNaN(minScoreValue) || minScoreValue < 0) {
     throw new Error('Please enter a valid minimum score');
+  }
+
+  const collateralAmountValue = parseFloat(collateralAmount);
+  if (isNaN(collateralAmountValue) || collateralAmountValue <= 0) {
+    throw new Error('Please enter a valid collateral amount');
   }
 
   // Find the token account for the selected token
@@ -106,14 +112,23 @@ export async function createLoanOffer(
   console.log('Loan Token Mint:', selectedToken.mint);
   console.log('Accepted Token Mint:', acceptedTokenMint.toString());
   console.log('Amount:', amount * Math.pow(10, 6));
+  console.log('Collateral Amount:', collateralAmountValue * Math.pow(10, 6));
   console.log('Interest Rate BPS:', Math.round(interestRateBps * 100));
   console.log('Duration Seconds:', durationSeconds);
   console.log('Min Score:', minScoreValue);
   
   try {
+    console.log('About to call createLoan with parameters:');
+    console.log('- loan_amount:', amount * Math.pow(10, 6));
+    console.log('- collateral_amount:', collateralAmountValue * Math.pow(10, 6));
+    console.log('- interest_rate_bps:', Math.round(interestRateBps * 100));
+    console.log('- duration_slots:', durationSeconds);
+    console.log('- min_score:', minScoreValue);
+    
     const tx = await program.methods
       .createLoan(
-        new BN(amount * Math.pow(10, 6)), // amount
+        new BN(amount * Math.pow(10, 6)), // loan_amount
+        new BN(collateralAmountValue * Math.pow(10, 6)), // FIXME: this assumes all tokens have the same decimals
         Math.round(interestRateBps * 100), // interest_rate_bps (convert percentage to basis points)
         new BN(durationSeconds), // duration_slots (convert days to seconds)
         new BN(minScoreValue) // min_score
@@ -206,9 +221,7 @@ export async function acceptLoan(
 
   // Create the instruction
   const instruction = await program.methods
-    .takeLoan(
-      new BN(parseFloat(loanOfferData.amount) * Math.pow(10, 6)) // amount
-    )
+    .takeLoan()
     .accounts({
       openLoan: openLoanPda,
       collateralVault: collateralVaultPda,

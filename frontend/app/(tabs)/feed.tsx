@@ -73,7 +73,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
       // TODO: hardcoded - replace with actual loan offer data from the selected offer
       const takeLoanData: TakeLoanData = {
         tokenMint: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', // TODO: hardcoded - should be the token mint from the selected loan offer
-        lenderPublicKey: '6eomfGH6F4ovsd1FN6ccwfpt6uwzeL6rcLyD2HBYVpfm', // TODO: hardcoded - should be the lender's public key from the selected loan offer
+        lenderPublicKey: 'DY1Q6eLWtAuVZJtRVC64ZhCeBqwxwvVpWUwDJQQjSv55', // TODO: hardcoded - should be the lender's public key from the selected loan offer
         amount: amount,
       };
 
