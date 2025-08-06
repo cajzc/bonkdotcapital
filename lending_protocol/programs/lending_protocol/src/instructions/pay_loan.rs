@@ -11,9 +11,9 @@ pub fn pay_loan(ctx:Context<PayLoan>) -> anchor_lang::Result<()> {
     // Ensure loan isn't already repaid
     require!(!ctx.accounts.open_loan.is_repaid, Errors::LoanAlreadyRepaid);
 
-    // FIXME: 
+    // FIXME:
     const SECONDS_PER_YEAR: u64 = 31_536_000;
-    
+
     let clock = Clock::get()?;
 
     // Calculate time elapsed in seconds
@@ -54,7 +54,7 @@ pub fn pay_loan(ctx:Context<PayLoan>) -> anchor_lang::Result<()> {
     //Return collateral to the borrower
     let loan_info_key = ctx.accounts.loan_info.key();
     let borrower_key = ctx.accounts.borrower.key();
-    
+
     let amount_to_return = collateral_vault.amount;
     if amount_to_return > 0 {
         let seeds = &[
@@ -125,13 +125,17 @@ pub struct PayLoan<'info>{
     #[account(
         mut,
         token::mint = token_mint,
-        token::authority = loan_info.lender
+        token::authority = loan_info.lender,
     )]
     pub lender_token_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(mut)]
     pub borrower: Signer<'info>,
+
+    #[account(constraint = loan_info.lender == lender.key())]
+    /// CHECK: lender is only used for loan info pda derivation
     pub lender: AccountInfo<'info>,
+
     pub token_mint: InterfaceAccount<'info, Mint>,
     pub token_program: Interface<'info, TokenInterface>,
 }

@@ -38,7 +38,7 @@ pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
     open_loan.principal = ctx.accounts.loan_info.amount;
     open_loan.start_time = ctx.accounts.clock.unix_timestamp;
     // FIXME: Casting
-    open_loan.repay_by_time = ctx.accounts.clock.unix_timestamp + ctx.accounts.loan_info.duration_seconds as i64; 
+    open_loan.repay_by_time = ctx.accounts.clock.unix_timestamp + ctx.accounts.loan_info.duration_seconds as i64;
     open_loan.is_repaid = false;
     open_loan.bump = ctx.bumps.open_loan;
 
@@ -141,11 +141,14 @@ pub struct TakeLoan<'info> {
         seeds = [b"loan_info", lender.key().as_ref(), token_mint.key().as_ref()],
         bump
     )]
-    /// Stores metadata about the loan info 
+    /// Stores metadata about the loan info
     pub loan_info: Account<'info, LoanInfo>,
 
     #[account(mut)]
     pub borrower: Signer<'info>,
+
+    #[account(constraint = loan_info.lender == lender.key())]
+    /// CHECK: lender is only used for loan info pda derivation
     pub lender: AccountInfo<'info>,
     pub token_mint: InterfaceAccount<'info, Mint>,
     pub token_program: Interface<'info, TokenInterface>,
