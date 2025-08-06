@@ -25,7 +25,6 @@ pub mod lending_protocol {
         interest_rate_bps: u16,
         duration_slots: u64,
         min_score: u64,
-        bump: u8,
     ) -> Result<()> {
         instructions::create_loan(
             ctx,
@@ -33,7 +32,6 @@ pub mod lending_protocol {
             interest_rate_bps,
             duration_slots,
             min_score,
-            bump,
         )
     }
 
