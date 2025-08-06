@@ -34,6 +34,9 @@ export default function LendScreen() {
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [hasLoadedTokens, setHasLoadedTokens] = useState(false);
   const [selectedReceiveToken, setSelectedReceiveToken] = useState<'SOL' | 'BONK' | null>(null);
+  const [interestRate, setInterestRate] = useState('5'); // Default 5%
+  const [durationDays, setDurationDays] = useState('30'); // Default 30 days
+  const [minScore, setMinScore] = useState('0'); // Default 0
 
   // Create connection once, not on every render
   const connection = React.useMemo(() => new Connection(RPC_ENDPOINT), []);
@@ -98,6 +101,21 @@ export default function LendScreen() {
       return;
     }
 
+    if (!interestRate || parseFloat(interestRate) <= 0) {
+      Alert.alert('Error', 'Please enter a valid interest rate');
+      return;
+    }
+
+    if (!durationDays || parseFloat(durationDays) <= 0) {
+      Alert.alert('Error', 'Please enter a valid duration');
+      return;
+    }
+
+    if (!minScore || parseFloat(minScore) < 0) {
+      Alert.alert('Error', 'Please enter a valid minimum score');
+      return;
+    }
+
     if (!program || !connection || !wallet) {
       Alert.alert('Error', 'Solana program not available. Please try again.');
       return;
@@ -118,7 +136,10 @@ export default function LendScreen() {
         userPublicKey,
         selectedToken,
         lendingAmount,
-        selectedReceiveToken
+        selectedReceiveToken,
+        interestRate,
+        durationDays,
+        minScore
       );
       
       console.log('Transaction signature:', signature);
@@ -128,6 +149,9 @@ export default function LendScreen() {
       setLendingAmount('');
       setSelectedToken(null);
       setSelectedReceiveToken(null);
+      setInterestRate('5');
+      setDurationDays('30');
+      setMinScore('0');
 
     } catch (error: any) {
       console.error('Error creating loan offer:', error);
@@ -244,11 +268,37 @@ export default function LendScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Minimum Token Amount</Text>
+            <Text style={styles.inputLabel}>Interest Rate (%)</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="e.g., 100"
+              placeholder="e.g., 5"
               placeholderTextColor={Colors.textTertiary}
+              value={interestRate}
+              onChangeText={setInterestRate}
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Duration (days)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g., 30"
+              placeholderTextColor={Colors.textTertiary}
+              value={durationDays}
+              onChangeText={setDurationDays}
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Minimum Score</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g., 0"
+              placeholderTextColor={Colors.textTertiary}
+              value={minScore}
+              onChangeText={setMinScore}
               keyboardType="numeric"
             />
           </View>

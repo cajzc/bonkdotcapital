@@ -25,3 +25,11 @@ export function createVaultPDA(loanOfferPda: PublicKey, programId: PublicKey): P
     );
     return vaultPda;
 }
+
+export function createObligationPDA(borrower: PublicKey, programId: PublicKey): PublicKey {
+    const [obligationPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from('obligation'), borrower.toBuffer()],
+        programId
+    );
+    return obligationPda;
+}

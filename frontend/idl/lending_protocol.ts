@@ -14,35 +14,23 @@ export type LendingProtocol = {
   },
   "instructions": [
     {
-      "name": "initialize",
+      "name": "createLoan",
       "discriminator": [
-        175,
-        175,
-        109,
-        31,
-        13,
-        152,
-        155,
-        237
-      ],
-      "accounts": [],
-      "args": []
-    },
-    {
-      "name": "initializeCreateLoan",
-      "discriminator": [
-        108,
-        19,
-        84,
-        115,
-        75,
-        200,
-        243,
-        236
+        166,
+        131,
+        118,
+        219,
+        138,
+        218,
+        206,
+        140
       ],
       "accounts": [
         {
-          "name": "loanOffer",
+          "name": "loanInfo",
+          "docs": [
+            "Stores metadata about the loan info"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -54,11 +42,10 @@ export type LendingProtocol = {
                   97,
                   110,
                   95,
-                  111,
+                  105,
+                  110,
                   102,
-                  102,
-                  101,
-                  114
+                  111
                 ]
               },
               {
@@ -67,13 +54,16 @@ export type LendingProtocol = {
               },
               {
                 "kind": "account",
-                "path": "tokenMint"
+                "path": "loanTokenMint"
               }
             ]
           }
         },
         {
           "name": "vault",
+          "docs": [
+            "Holds the tokens sent out for a loan prior to a second party borrowing"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -89,7 +79,7 @@ export type LendingProtocol = {
               },
               {
                 "kind": "account",
-                "path": "loanOffer"
+                "path": "loanInfo"
               }
             ]
           }
@@ -104,7 +94,10 @@ export type LendingProtocol = {
           "writable": true
         },
         {
-          "name": "tokenMint"
+          "name": "loanTokenMint"
+        },
+        {
+          "name": "acceptedTokenMint"
         },
         {
           "name": "tokenProgram"
@@ -134,28 +127,45 @@ export type LendingProtocol = {
         {
           "name": "minScore",
           "type": "u64"
-        },
-        {
-          "name": "bump",
-          "type": "u8"
         }
       ]
     },
     {
-      "name": "initializeObligation",
+      "name": "initialize",
+      "docs": [
+        "Testing purposes"
+      ],
       "discriminator": [
-        93,
-        178,
-        46,
-        182,
-        79,
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [],
+      "args": []
+    },
+    {
+      "name": "payLoan",
+      "discriminator": [
         238,
-        67,
-        69
+        200,
+        76,
+        184,
+        218,
+        195,
+        214,
+        11
       ],
       "accounts": [
         {
-          "name": "obligation",
+          "name": "openLoan",
+          "docs": [
+            "State of the loan taken by a borrower"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -163,118 +173,10 @@ export type LendingProtocol = {
                 "kind": "const",
                 "value": [
                   111,
-                  98,
-                  108,
-                  105,
-                  103,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "borrower"
-              }
-            ]
-          }
-        },
-        {
-          "name": "borrowerTokenAccount",
-          "writable": true
-        },
-        {
-          "name": "collateralVault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  108,
-                  108,
-                  97,
-                  116,
+                  112,
                   101,
-                  114,
-                  97,
-                  108,
+                  110,
                   95,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "borrower"
-              },
-              {
-                "kind": "account",
-                "path": "tokenMint"
-              }
-            ]
-          }
-        },
-        {
-          "name": "tokenMint"
-        },
-        {
-          "name": "borrower",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "tokenProgram",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "rent",
-          "address": "SysvarRent111111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "bump",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "initializePayLoan",
-      "discriminator": [
-        123,
-        141,
-        100,
-        217,
-        169,
-        16,
-        101,
-        21
-      ],
-      "accounts": [
-        {
-          "name": "loan",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
                   108,
                   111,
                   97,
@@ -283,7 +185,7 @@ export type LendingProtocol = {
               },
               {
                 "kind": "account",
-                "path": "loanOffer"
+                "path": "loanInfo"
               },
               {
                 "kind": "account",
@@ -293,7 +195,11 @@ export type LendingProtocol = {
           }
         },
         {
-          "name": "loanOffer",
+          "name": "loanInfo",
+          "docs": [
+            "Stores metadata about the loan info"
+          ],
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -304,17 +210,15 @@ export type LendingProtocol = {
                   97,
                   110,
                   95,
-                  111,
+                  105,
+                  110,
                   102,
-                  102,
-                  101,
-                  114
+                  111
                 ]
               },
               {
                 "kind": "account",
-                "path": "loan_offer.lender",
-                "account": "loanOffer"
+                "path": "lender"
               },
               {
                 "kind": "account",
@@ -324,34 +228,10 @@ export type LendingProtocol = {
           }
         },
         {
-          "name": "obligation",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  111,
-                  98,
-                  108,
-                  105,
-                  103,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "borrower"
-              }
-            ]
-          }
-        },
-        {
           "name": "collateralVault",
+          "docs": [
+            "Stores the collateral token and metadata"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -378,11 +258,11 @@ export type LendingProtocol = {
               },
               {
                 "kind": "account",
-                "path": "borrower"
+                "path": "loanInfo"
               },
               {
                 "kind": "account",
-                "path": "tokenMint"
+                "path": "borrower"
               }
             ]
           }
@@ -398,81 +278,49 @@ export type LendingProtocol = {
         {
           "name": "borrower",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "loan",
-            "obligation"
-          ]
+          "signer": true
         },
         {
-          "name": "tokenMint",
-          "relations": [
-            "loanOffer"
-          ]
+          "name": "lender"
+        },
+        {
+          "name": "tokenMint"
         },
         {
           "name": "tokenProgram"
-        },
-        {
-          "name": "clock",
-          "address": "SysvarC1ock11111111111111111111111111111111"
         }
       ],
       "args": []
     },
     {
-      "name": "intializeAcceptLoan",
+      "name": "takeLoan",
       "discriminator": [
-        16,
-        179,
-        39,
-        48,
-        243,
-        139,
-        69,
-        41
+        153,
+        53,
+        51,
+        59,
+        222,
+        102,
+        52,
+        131
       ],
       "accounts": [
         {
-          "name": "loanOffer",
+          "name": "openLoan",
+          "docs": [
+            "State of the loan taken by a borrower"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  108,
                   111,
-                  97,
+                  112,
+                  101,
                   110,
                   95,
-                  111,
-                  102,
-                  102,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "loan_offer.lender",
-                "account": "loanOffer"
-              },
-              {
-                "kind": "account",
-                "path": "tokenMint"
-              }
-            ]
-          }
-        },
-        {
-          "name": "loan",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
                   108,
                   111,
                   97,
@@ -481,7 +329,7 @@ export type LendingProtocol = {
               },
               {
                 "kind": "account",
-                "path": "loanOffer"
+                "path": "loanInfo"
               },
               {
                 "kind": "account",
@@ -491,24 +339,37 @@ export type LendingProtocol = {
           }
         },
         {
-          "name": "obligation",
+          "name": "collateralVault",
+          "docs": [
+            "Stores the collateral token and metadata"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
+                  99,
                   111,
-                  98,
                   108,
-                  105,
-                  103,
+                  108,
                   97,
                   116,
-                  105,
-                  111,
-                  110
+                  101,
+                  114,
+                  97,
+                  108,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "loanInfo"
               },
               {
                 "kind": "account",
@@ -576,24 +437,75 @@ export type LendingProtocol = {
         },
         {
           "name": "vault",
+          "docs": [
+            "Holds the tokens sent out for a loan prior to a second party borrowing"
+          ],
           "writable": true,
-          "relations": [
-            "loanOffer"
-          ]
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "loanInfo"
+              }
+            ]
+          }
+        },
+        {
+          "name": "loanInfo",
+          "docs": [
+            "Stores metadata about the loan info"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  97,
+                  110,
+                  95,
+                  105,
+                  110,
+                  102,
+                  111
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lender"
+              },
+              {
+                "kind": "account",
+                "path": "tokenMint"
+              }
+            ]
+          }
         },
         {
           "name": "borrower",
           "writable": true,
           "signer": true,
           "relations": [
-            "obligation"
+            "collateralVault"
           ]
         },
         {
-          "name": "tokenMint",
-          "relations": [
-            "loanOffer"
-          ]
+          "name": "lender"
+        },
+        {
+          "name": "tokenMint"
         },
         {
           "name": "tokenProgram"
@@ -617,50 +529,50 @@ export type LendingProtocol = {
       ],
       "args": [
         {
-          "name": "bump",
-          "type": "u8"
+          "name": "amount",
+          "type": "u64"
         }
       ]
     }
   ],
   "accounts": [
     {
-      "name": "loan",
+      "name": "collateralVault",
       "discriminator": [
-        20,
-        195,
-        70,
-        117,
-        165,
-        227,
-        182,
-        1
+        19,
+        189,
+        95,
+        155,
+        100,
+        9,
+        159,
+        145
       ]
     },
     {
-      "name": "loanOffer",
+      "name": "loanInfo",
       "discriminator": [
-        216,
-        231,
-        124,
-        134,
-        199,
+        177,
+        123,
         190,
-        126,
-        158
+        7,
+        82,
+        223,
+        152,
+        75
       ]
     },
     {
-      "name": "obligation",
+      "name": "openLoan",
       "discriminator": [
-        168,
-        206,
-        141,
-        106,
-        88,
-        76,
-        172,
-        167
+        22,
+        159,
+        20,
+        234,
+        213,
+        238,
+        82,
+        86
       ]
     }
   ],
@@ -672,88 +584,89 @@ export type LendingProtocol = {
     },
     {
       "code": 6001,
+      "name": "collateralNotEnough",
+      "msg": "Not enough tokens for collateral"
+    },
+    {
+      "code": 6002,
       "name": "invalidInterestRate",
       "msg": "Interest rate must be greater than zero"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "invalidDuration",
       "msg": "Loan duration must be greater than zero"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "invalidScore",
       "msg": "Minimum score must be valid (0-1000)"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "offerNotActive",
       "msg": "Loan offer is not active"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "insufficientScore",
       "msg": "Borrower score is insufficient"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "loanOfferExpired",
       "msg": "Loan offer has expired"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "loanAlreadyRepaid",
       "msg": "Loan already repaid"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "insufficientRepayment",
       "msg": "Insufficient repayment amount"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "loanRepaymentOverdue",
       "msg": "Loan repayment overdue it got liquidated"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "mathOverflow",
       "msg": "Math overflow occurred"
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "loanAlreadyExists",
       "msg": "Borrower already has an active loan."
     }
   ],
   "types": [
     {
-      "name": "loan",
+      "name": "collateralVault",
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "offer",
-            "type": "pubkey"
-          },
           {
             "name": "borrower",
             "type": "pubkey"
           },
           {
-            "name": "principal",
+            "name": "tokenMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "loanInfo",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
             "type": "u64"
           },
           {
-            "name": "startTime",
-            "type": "i64"
-          },
-          {
-            "name": "repayByTime",
-            "type": "i64"
-          },
-          {
-            "name": "isRepaid",
+            "name": "isActive",
             "type": "bool"
           },
           {
@@ -764,7 +677,7 @@ export type LendingProtocol = {
       }
     },
     {
-      "name": "loanOffer",
+      "name": "loanInfo",
       "type": {
         "kind": "struct",
         "fields": [
@@ -773,7 +686,11 @@ export type LendingProtocol = {
             "type": "pubkey"
           },
           {
-            "name": "tokenMint",
+            "name": "loanTokenMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "acceptedTokenMint",
             "type": "pubkey"
           },
           {
@@ -808,28 +725,32 @@ export type LendingProtocol = {
       }
     },
     {
-      "name": "obligation",
+      "name": "openLoan",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "loanInfo",
+            "type": "pubkey"
+          },
           {
             "name": "borrower",
             "type": "pubkey"
           },
           {
-            "name": "collateralTokenMint",
-            "type": "pubkey"
-          },
-          {
-            "name": "collateralAccount",
-            "type": "pubkey"
-          },
-          {
-            "name": "depositedAmount",
+            "name": "principal",
             "type": "u64"
           },
           {
-            "name": "loanActive",
+            "name": "startTime",
+            "type": "i64"
+          },
+          {
+            "name": "repayByTime",
+            "type": "i64"
+          },
+          {
+            "name": "isRepaid",
             "type": "bool"
           },
           {

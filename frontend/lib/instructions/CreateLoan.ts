@@ -20,17 +20,35 @@ export interface PayLoanData {
 
 // Create loan offer operation
 export async function createLoanOffer(
-  program: Program<any>,
+  program: any,
   connection: Connection,
   wallet: any,
   userPublicKey: PublicKey,
   selectedToken: { mint: string; balance: number },
   lendingAmount: string,
-  selectedReceiveToken: string
+  selectedReceiveToken: string,
+  interestRate: string,
+  durationDays: string,
+  minScore: string
 ): Promise<string> {
   const amount = parseFloat(lendingAmount);
   if (isNaN(amount) || amount <= 0) {
     throw new Error('Please enter a valid amount');
+  }
+
+  const interestRateBps = parseFloat(interestRate);
+  if (isNaN(interestRateBps) || interestRateBps <= 0) {
+    throw new Error('Please enter a valid interest rate');
+  }
+
+  const duration = parseFloat(durationDays);
+  if (isNaN(duration) || duration <= 0) {
+    throw new Error('Please enter a valid duration');
+  }
+
+  const minScoreValue = parseFloat(minScore);
+  if (isNaN(minScoreValue) || minScoreValue < 0) {
+    throw new Error('Please enter a valid minimum score');
   }
 
   // Find the token account for the selected token
@@ -48,10 +66,22 @@ export async function createLoanOffer(
   const lenderTokenAccount = tokenAccounts.value[0].pubkey;
   console.log('Using token account:', lenderTokenAccount.toString());
 
-  // Create PDA for the loan offer
-  const [loanOfferPda] = PublicKey.findProgramAddressSync(
+  // Get the accepted token mint based on selection
+  let acceptedTokenMint: PublicKey;
+  if (selectedReceiveToken === 'SOL') {
+    // Use wrapped SOL mint address
+    acceptedTokenMint = new PublicKey('So11111111111111111111111111111111111111112');
+  } else if (selectedReceiveToken === 'BONK') {
+    // Use BONK mint address
+    acceptedTokenMint = new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263');
+  } else {
+    throw new Error('Invalid selected receive token');
+  }
+
+  // Create PDA for the loan info
+  const [loanInfoPda] = PublicKey.findProgramAddressSync(
     [
-      Buffer.from('loan_offer'),
+      Buffer.from('loan_info'),
       userPublicKey.toBuffer(),
       new PublicKey(selectedToken.mint).toBuffer(),
     ],
@@ -62,51 +92,51 @@ export async function createLoanOffer(
   const [vaultPda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('vault'),
-      loanOfferPda.toBuffer(),
+      loanInfoPda.toBuffer(),
     ],
     program.programId
   );
 
   // Create the instruction
-  const instruction = await program.methods
-    .initializeCreateLoan(
-      new BN(amount * Math.pow(10, 6)), // amount
-      500, // interest_rate_bps (5% = 500 basis points)
-      new BN(1000), // duration_slots
-      new BN(0), // min_score
-      0 // bump 
-    )
-    .accounts({
-      loanOffer: loanOfferPda,
-      vault: vaultPda,
-      lender: userPublicKey,
-      lenderTokenAccount: lenderTokenAccount,
-      tokenMint: new PublicKey(selectedToken.mint),
-      tokenProgram: TOKEN_PROGRAM_ID,
-      systemProgram: SystemProgram.programId,
-      rent: SYSVAR_RENT_PUBKEY,
-    })
-    .instruction();
-
-  // Create and send transaction
-  const transaction = new Transaction();
-  transaction.add(instruction);
-
-  // Get latest blockhash
-  const { blockhash } = await connection.getLatestBlockhash();
-  transaction.recentBlockhash = blockhash;
-  transaction.feePayer = userPublicKey;
-
-  // Sign and send transaction using the wallet
-  const signedTransaction = await wallet?.signTransaction(transaction);
-  if (!signedTransaction) {
-    throw new Error('Failed to sign transaction');
-  }
-
-  const signature = await connection.sendRawTransaction(signedTransaction.serialize());
-  await connection.confirmTransaction(signature);
+  const durationSeconds = Math.floor(duration * 24 * 60 * 60);
   
-  return signature;
+  console.log('Loan Info PDA:', loanInfoPda.toString());
+  console.log('Vault PDA:', vaultPda.toString());
+  console.log('Lender:', userPublicKey.toString());
+  console.log('Loan Token Mint:', selectedToken.mint);
+  console.log('Accepted Token Mint:', acceptedTokenMint.toString());
+  console.log('Amount:', amount * Math.pow(10, 6));
+  console.log('Interest Rate BPS:', Math.round(interestRateBps * 100));
+  console.log('Duration Seconds:', durationSeconds);
+  console.log('Min Score:', minScoreValue);
+  
+  try {
+    const tx = await program.methods
+      .createLoan(
+        new BN(amount * Math.pow(10, 6)), // amount
+        Math.round(interestRateBps * 100), // interest_rate_bps (convert percentage to basis points)
+        new BN(durationSeconds), // duration_seconds (convert days to seconds)
+        new BN(minScoreValue) // min_score
+      )
+      .accounts({
+        loanInfo: loanInfoPda,
+        vault: vaultPda,
+        lender: userPublicKey,
+        lenderTokenAccount: lenderTokenAccount,
+        loanTokenMint: new PublicKey(selectedToken.mint),
+        acceptedTokenMint: acceptedTokenMint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .rpc();
+
+    console.log('Transaction successful:', tx);
+    return tx;
+  } catch (error) {
+    console.error('Transaction failed:', error);
+    throw error;
+  }
 }
 
 // Accept loan operation
@@ -120,21 +150,31 @@ export async function acceptLoan(
   const tokenMint = new PublicKey(loanOfferData.tokenMint);
   const lenderPublicKey = new PublicKey(loanOfferData.lenderPublicKey);
 
-  // Find PDA for loan offer
-  const [loanOfferPda] = PublicKey.findProgramAddressSync(
+  // Find PDA for loan info
+  const [loanInfoPda] = PublicKey.findProgramAddressSync(
     [
-      Buffer.from('loan_offer'),
+      Buffer.from('loan_info'),
       lenderPublicKey.toBuffer(),
       tokenMint.toBuffer(),
     ],
     program.programId
   );
 
-  // Find PDA for loan
-  const [loanPda] = PublicKey.findProgramAddressSync(
+  // Find PDA for open loan
+  const [openLoanPda] = PublicKey.findProgramAddressSync(
     [
-      Buffer.from('loan'),
-      loanOfferPda.toBuffer(),
+      Buffer.from('open_loan'),
+      loanInfoPda.toBuffer(),
+      borrowerPublicKey.toBuffer(),
+    ],
+    program.programId
+  );
+
+  // Find PDA for collateral vault
+  const [collateralVaultPda] = PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('collateral_vault'),
+      loanInfoPda.toBuffer(),
       borrowerPublicKey.toBuffer(),
     ],
     program.programId
@@ -144,7 +184,7 @@ export async function acceptLoan(
   const [vaultPda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('vault'),
-      loanOfferPda.toBuffer(),
+      loanInfoPda.toBuffer(),
     ],
     program.programId
   );
@@ -166,17 +206,20 @@ export async function acceptLoan(
 
   // Create the instruction
   const instruction = await program.methods
-    .intializeAcceptLoan(
-      0 // bump (Anchor will handle this)
+    .takeLoan(
+      new BN(parseFloat(loanOfferData.amount) * Math.pow(10, 6)) // amount
     )
     .accounts({
-      loanOffer: loanOfferPda,
-      loan: loanPda,
+      openLoan: openLoanPda,
+      collateralVault: collateralVaultPda,
       borrowerTokenAccount: borrowerTokenAccount,
       vault: vaultPda,
+      loanInfo: loanInfoPda,
       borrower: borrowerPublicKey,
+      lender: lenderPublicKey,
       tokenMint: tokenMint,
       tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'),
       systemProgram: SystemProgram.programId,
       rent: SYSVAR_RENT_PUBKEY,
       clock: SYSVAR_CLOCK_PUBKEY,
@@ -215,21 +258,31 @@ export async function payLoan(
   const tokenMint = new PublicKey(payLoanData.tokenMint);
   const lenderPublicKey = new PublicKey(payLoanData.lenderPublicKey);
 
-  // Find PDA for loan offer
-  const [loanOfferPda] = PublicKey.findProgramAddressSync(
+  // Find PDA for loan info
+  const [loanInfoPda] = PublicKey.findProgramAddressSync(
     [
-      Buffer.from('loan_offer'),
+      Buffer.from('loan_info'),
       lenderPublicKey.toBuffer(),
       tokenMint.toBuffer(),
     ],
     program.programId
   );
 
-  // Find PDA for loan
-  const [loanPda] = PublicKey.findProgramAddressSync(
+  // Find PDA for open loan
+  const [openLoanPda] = PublicKey.findProgramAddressSync(
     [
-      Buffer.from('loan'),
-      loanOfferPda.toBuffer(),
+      Buffer.from('open_loan'),
+      loanInfoPda.toBuffer(),
+      borrowerPublicKey.toBuffer(),
+    ],
+    program.programId
+  );
+
+  // Find PDA for collateral vault
+  const [collateralVaultPda] = PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('collateral_vault'),
+      loanInfoPda.toBuffer(),
       borrowerPublicKey.toBuffer(),
     ],
     program.programId
@@ -265,16 +318,17 @@ export async function payLoan(
 
   // Create the instruction
   const instruction = await program.methods
-    .initializePayLoan()
+    .payLoan()
     .accounts({
-      loan: loanPda,
-      loanOffer: loanOfferPda,
+      openLoan: openLoanPda,
+      loanInfo: loanInfoPda,
+      collateralVault: collateralVaultPda,
       borrowerTokenAccount: borrowerTokenAccount,
       lenderTokenAccount: lenderTokenAccount,
       borrower: borrowerPublicKey,
+      lender: lenderPublicKey,
       tokenMint: tokenMint,
       tokenProgram: TOKEN_PROGRAM_ID,
-      clock: SYSVAR_CLOCK_PUBKEY,
     })
     .instruction();
 

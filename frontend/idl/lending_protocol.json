@@ -8,35 +8,23 @@
   },
   "instructions": [
     {
-      "name": "initialize",
+      "name": "create_loan",
       "discriminator": [
-        175,
-        175,
-        109,
-        31,
-        13,
-        152,
-        155,
-        237
-      ],
-      "accounts": [],
-      "args": []
-    },
-    {
-      "name": "initialize_create_loan",
-      "discriminator": [
-        108,
-        19,
-        84,
-        115,
-        75,
-        200,
-        243,
-        236
+        166,
+        131,
+        118,
+        219,
+        138,
+        218,
+        206,
+        140
       ],
       "accounts": [
         {
-          "name": "loan_offer",
+          "name": "loan_info",
+          "docs": [
+            "Stores metadata about the loan info"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -48,11 +36,10 @@
                   97,
                   110,
                   95,
-                  111,
+                  105,
+                  110,
                   102,
-                  102,
-                  101,
-                  114
+                  111
                 ]
               },
               {
@@ -61,13 +48,16 @@
               },
               {
                 "kind": "account",
-                "path": "token_mint"
+                "path": "loan_token_mint"
               }
             ]
           }
         },
         {
           "name": "vault",
+          "docs": [
+            "Holds the tokens sent out for a loan prior to a second party borrowing"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -83,7 +73,7 @@
               },
               {
                 "kind": "account",
-                "path": "loan_offer"
+                "path": "loan_info"
               }
             ]
           }
@@ -98,7 +88,10 @@
           "writable": true
         },
         {
-          "name": "token_mint"
+          "name": "loan_token_mint"
+        },
+        {
+          "name": "accepted_token_mint"
         },
         {
           "name": "token_program"
@@ -128,28 +121,45 @@
         {
           "name": "min_score",
           "type": "u64"
-        },
-        {
-          "name": "bump",
-          "type": "u8"
         }
       ]
     },
     {
-      "name": "initialize_obligation",
+      "name": "initialize",
+      "docs": [
+        "Testing purposes"
+      ],
       "discriminator": [
-        93,
-        178,
-        46,
-        182,
-        79,
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [],
+      "args": []
+    },
+    {
+      "name": "pay_loan",
+      "discriminator": [
         238,
-        67,
-        69
+        200,
+        76,
+        184,
+        218,
+        195,
+        214,
+        11
       ],
       "accounts": [
         {
-          "name": "obligation",
+          "name": "open_loan",
+          "docs": [
+            "State of the loan taken by a borrower"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -157,118 +167,10 @@
                 "kind": "const",
                 "value": [
                   111,
-                  98,
-                  108,
-                  105,
-                  103,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "borrower"
-              }
-            ]
-          }
-        },
-        {
-          "name": "borrower_token_account",
-          "writable": true
-        },
-        {
-          "name": "collateral_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  108,
-                  108,
-                  97,
-                  116,
+                  112,
                   101,
-                  114,
-                  97,
-                  108,
+                  110,
                   95,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "borrower"
-              },
-              {
-                "kind": "account",
-                "path": "token_mint"
-              }
-            ]
-          }
-        },
-        {
-          "name": "token_mint"
-        },
-        {
-          "name": "borrower",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "rent",
-          "address": "SysvarRent111111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "bump",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "initialize_pay_loan",
-      "discriminator": [
-        123,
-        141,
-        100,
-        217,
-        169,
-        16,
-        101,
-        21
-      ],
-      "accounts": [
-        {
-          "name": "loan",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
                   108,
                   111,
                   97,
@@ -277,7 +179,7 @@
               },
               {
                 "kind": "account",
-                "path": "loan_offer"
+                "path": "loan_info"
               },
               {
                 "kind": "account",
@@ -287,7 +189,11 @@
           }
         },
         {
-          "name": "loan_offer",
+          "name": "loan_info",
+          "docs": [
+            "Stores metadata about the loan info"
+          ],
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -298,17 +204,15 @@
                   97,
                   110,
                   95,
-                  111,
+                  105,
+                  110,
                   102,
-                  102,
-                  101,
-                  114
+                  111
                 ]
               },
               {
                 "kind": "account",
-                "path": "loan_offer.lender",
-                "account": "LoanOffer"
+                "path": "lender"
               },
               {
                 "kind": "account",
@@ -318,34 +222,10 @@
           }
         },
         {
-          "name": "obligation",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  111,
-                  98,
-                  108,
-                  105,
-                  103,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "borrower"
-              }
-            ]
-          }
-        },
-        {
           "name": "collateral_vault",
+          "docs": [
+            "Stores the collateral token and metadata"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -372,11 +252,11 @@
               },
               {
                 "kind": "account",
-                "path": "borrower"
+                "path": "loan_info"
               },
               {
                 "kind": "account",
-                "path": "token_mint"
+                "path": "borrower"
               }
             ]
           }
@@ -392,81 +272,49 @@
         {
           "name": "borrower",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "loan",
-            "obligation"
-          ]
+          "signer": true
         },
         {
-          "name": "token_mint",
-          "relations": [
-            "loan_offer"
-          ]
+          "name": "lender"
+        },
+        {
+          "name": "token_mint"
         },
         {
           "name": "token_program"
-        },
-        {
-          "name": "clock",
-          "address": "SysvarC1ock11111111111111111111111111111111"
         }
       ],
       "args": []
     },
     {
-      "name": "intialize_accept_loan",
+      "name": "take_loan",
       "discriminator": [
-        16,
-        179,
-        39,
-        48,
-        243,
-        139,
-        69,
-        41
+        153,
+        53,
+        51,
+        59,
+        222,
+        102,
+        52,
+        131
       ],
       "accounts": [
         {
-          "name": "loan_offer",
+          "name": "open_loan",
+          "docs": [
+            "State of the loan taken by a borrower"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  108,
                   111,
-                  97,
+                  112,
+                  101,
                   110,
                   95,
-                  111,
-                  102,
-                  102,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "loan_offer.lender",
-                "account": "LoanOffer"
-              },
-              {
-                "kind": "account",
-                "path": "token_mint"
-              }
-            ]
-          }
-        },
-        {
-          "name": "loan",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
                   108,
                   111,
                   97,
@@ -475,7 +323,7 @@
               },
               {
                 "kind": "account",
-                "path": "loan_offer"
+                "path": "loan_info"
               },
               {
                 "kind": "account",
@@ -485,24 +333,37 @@
           }
         },
         {
-          "name": "obligation",
+          "name": "collateral_vault",
+          "docs": [
+            "Stores the collateral token and metadata"
+          ],
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
+                  99,
                   111,
-                  98,
                   108,
-                  105,
-                  103,
+                  108,
                   97,
                   116,
-                  105,
-                  111,
-                  110
+                  101,
+                  114,
+                  97,
+                  108,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "loan_info"
               },
               {
                 "kind": "account",
@@ -570,24 +431,75 @@
         },
         {
           "name": "vault",
+          "docs": [
+            "Holds the tokens sent out for a loan prior to a second party borrowing"
+          ],
           "writable": true,
-          "relations": [
-            "loan_offer"
-          ]
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "loan_info"
+              }
+            ]
+          }
+        },
+        {
+          "name": "loan_info",
+          "docs": [
+            "Stores metadata about the loan info"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  97,
+                  110,
+                  95,
+                  105,
+                  110,
+                  102,
+                  111
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lender"
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ]
+          }
         },
         {
           "name": "borrower",
           "writable": true,
           "signer": true,
           "relations": [
-            "obligation"
+            "collateral_vault"
           ]
         },
         {
-          "name": "token_mint",
-          "relations": [
-            "loan_offer"
-          ]
+          "name": "lender"
+        },
+        {
+          "name": "token_mint"
         },
         {
           "name": "token_program"
@@ -611,50 +523,50 @@
       ],
       "args": [
         {
-          "name": "bump",
-          "type": "u8"
+          "name": "amount",
+          "type": "u64"
         }
       ]
     }
   ],
   "accounts": [
     {
-      "name": "Loan",
+      "name": "CollateralVault",
       "discriminator": [
-        20,
-        195,
-        70,
-        117,
-        165,
-        227,
-        182,
-        1
+        19,
+        189,
+        95,
+        155,
+        100,
+        9,
+        159,
+        145
       ]
     },
     {
-      "name": "LoanOffer",
+      "name": "LoanInfo",
       "discriminator": [
-        216,
-        231,
-        124,
-        134,
-        199,
+        177,
+        123,
         190,
-        126,
-        158
+        7,
+        82,
+        223,
+        152,
+        75
       ]
     },
     {
-      "name": "Obligation",
+      "name": "OpenLoan",
       "discriminator": [
-        168,
-        206,
-        141,
-        106,
-        88,
-        76,
-        172,
-        167
+        22,
+        159,
+        20,
+        234,
+        213,
+        238,
+        82,
+        86
       ]
     }
   ],
@@ -666,88 +578,89 @@
     },
     {
       "code": 6001,
+      "name": "CollateralNotEnough",
+      "msg": "Not enough tokens for collateral"
+    },
+    {
+      "code": 6002,
       "name": "InvalidInterestRate",
       "msg": "Interest rate must be greater than zero"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "InvalidDuration",
       "msg": "Loan duration must be greater than zero"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "InvalidScore",
       "msg": "Minimum score must be valid (0-1000)"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "OfferNotActive",
       "msg": "Loan offer is not active"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "InsufficientScore",
       "msg": "Borrower score is insufficient"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "LoanOfferExpired",
       "msg": "Loan offer has expired"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "LoanAlreadyRepaid",
       "msg": "Loan already repaid"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "InsufficientRepayment",
       "msg": "Insufficient repayment amount"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "LoanRepaymentOverdue",
       "msg": "Loan repayment overdue it got liquidated"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "MathOverflow",
       "msg": "Math overflow occurred"
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "LoanAlreadyExists",
       "msg": "Borrower already has an active loan."
     }
   ],
   "types": [
     {
-      "name": "Loan",
+      "name": "CollateralVault",
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "offer",
-            "type": "pubkey"
-          },
           {
             "name": "borrower",
             "type": "pubkey"
           },
           {
-            "name": "principal",
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "loan_info",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
             "type": "u64"
           },
           {
-            "name": "start_time",
-            "type": "i64"
-          },
-          {
-            "name": "repay_by_time",
-            "type": "i64"
-          },
-          {
-            "name": "is_repaid",
+            "name": "is_active",
             "type": "bool"
           },
           {
@@ -758,7 +671,7 @@
       }
     },
     {
-      "name": "LoanOffer",
+      "name": "LoanInfo",
       "type": {
         "kind": "struct",
         "fields": [
@@ -767,7 +680,11 @@
             "type": "pubkey"
           },
           {
-            "name": "token_mint",
+            "name": "loan_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "accepted_token_mint",
             "type": "pubkey"
           },
           {
@@ -802,28 +719,32 @@
       }
     },
     {
-      "name": "Obligation",
+      "name": "OpenLoan",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "loan_info",
+            "type": "pubkey"
+          },
           {
             "name": "borrower",
             "type": "pubkey"
           },
           {
-            "name": "collateral_token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "collateral_account",
-            "type": "pubkey"
-          },
-          {
-            "name": "deposited_amount",
+            "name": "principal",
             "type": "u64"
           },
           {
-            "name": "loan_active",
+            "name": "start_time",
+            "type": "i64"
+          },
+          {
+            "name": "repay_by_time",
+            "type": "i64"
+          },
+          {
+            "name": "is_repaid",
             "type": "bool"
           },
           {

@@ -51,6 +51,13 @@ const RequestCard: React.FC<RequestCardProps> = ({
   const [isBorrowing, setIsBorrowing] = useState(false);
 
   const handleBorrow = async () => {
+    console.log('handleBorrow called');
+    console.log('Connection:', !!connection);
+    console.log('Wallet:', !!wallet);
+    console.log('Program:', !!program);
+    console.log('Selected Account:', !!selectedAccount);
+    console.log('Selected Account Public Key:', selectedAccount?.publicKey?.toString());
+
     if (!connection || !wallet || !program) {
       Alert.alert('Error', 'Solana connection or program not available. Please try again.');
       return;
@@ -69,6 +76,9 @@ const RequestCard: React.FC<RequestCardProps> = ({
         lenderPublicKey: '6eomfGH6F4ovsd1FN6ccwfpt6uwzeL6rcLyD2HBYVpfm', // TODO: hardcoded - should be the lender's public key from the selected loan offer
         amount: amount,
       };
+
+      console.log('Calling takeLoan with data:', takeLoanData);
+      console.log('Borrower public key:', selectedAccount.publicKey.toString());
 
       const signature = await takeLoan(
         program,
@@ -133,7 +143,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
           <Text style={styles.commentsCount}>{comments}</Text>
         </View>
                  <View style={styles.buttonContainer}>
-           {isLending && (
+           {isLending && selectedAccount?.publicKey && (
              <TouchableOpacity 
                style={[styles.borrowButton, isBorrowing && styles.borrowButtonDisabled]}
                onPress={handleBorrow}
