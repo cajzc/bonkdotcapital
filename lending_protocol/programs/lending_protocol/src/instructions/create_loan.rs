@@ -61,7 +61,7 @@ pub struct CreateLoan<'info> {
     #[account(
         init,
         payer = lender,
-        space = 8 + 32 + 32 + 8 + 2 + 8 + 8 + 32 + 1 + 1, 
+        space = 8 + 32 + 32 + 32 + 8 + 2 + 8 + 8 + 32 + 1 + 1,
         seeds = [b"loan_info", lender.key().as_ref(), loan_token_mint.key().as_ref()],
         bump
     )]
