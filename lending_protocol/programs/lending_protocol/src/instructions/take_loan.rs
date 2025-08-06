@@ -11,17 +11,17 @@ use anchor_spl::{
 use std::str::FromStr;
 
 
-pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
+pub fn take_loan(ctx: Context<TakeLoan>) -> Result<()> {
     // The loaner wants sol as collateral
     if ctx.accounts.loan_info.collateral_token_mint.key() == Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap() {
         require!(
-            ctx.accounts.borrower.lamports() >= collateral_amount,
+            ctx.accounts.borrower.lamports() >= ctx.accounts.loan_info.collateral_amount,
             Errors::CollateralNotEnough
         );
     } else {
         // The loaner wants tokens as collateral
         require!(
-            ctx.accounts.borrower_token_account.amount >= collateral_amount,
+            ctx.accounts.borrower_token_account.amount >= ctx.accounts.loan_info.collateral_amount,
             Errors::CollateralNotEnough
         );
         require!(
@@ -63,7 +63,7 @@ pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
         let ix = solana_program::system_instruction::transfer(
             &ctx.accounts.borrower.key(),
             &ctx.accounts.collateral_vault.key(),
-            collateral_amount,
+            ctx.accounts.loan_info.collateral_amount,
         );
         solana_program::program::invoke(
             &ix,
@@ -80,7 +80,7 @@ pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
             authority: ctx.accounts.borrower.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
-        anchor_spl::token::transfer(cpi_ctx, collateral_amount)?;
+        anchor_spl::token::transfer(cpi_ctx, ctx.accounts.loan_info.collateral_amount)?;
     }
 
     // Create the collateral vault
@@ -88,7 +88,7 @@ pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
     collateral_vault.borrower = ctx.accounts.borrower.key();
     collateral_vault.token_mint= ctx.accounts.token_mint.key();
     collateral_vault.loan_info = ctx.accounts.loan_info.key();
-    collateral_vault.amount = collateral_amount;
+    collateral_vault.amount = ctx.accounts.loan_info.collateral_amount;
     collateral_vault.is_active = true;
     collateral_vault.bump = ctx.bumps.collateral_vault;
 

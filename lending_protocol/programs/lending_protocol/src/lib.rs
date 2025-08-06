@@ -37,8 +37,8 @@ pub mod lending_protocol {
         )
     }
 
-    pub fn take_loan(ctx: Context<TakeLoan>, amount: u64) -> Result<()> {
-        instructions::take_loan(ctx, amount)
+    pub fn take_loan(ctx: Context<TakeLoan>) -> Result<()> {
+        instructions::take_loan(ctx)
     }
 
     pub fn pay_loan(ctx: Context<PayLoan>) -> Result<()> {
