@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-lending_protocol = "5KZEGGgKN8FEKXHvqjJ169Adxdkj2JmNVNfHdRBytsvS"
+lending_protocol = "FJUYYdAmHJ996KqUen7jiD2AgbP3pgTU6KzRz28Lhhhn"
 
 [registry]
 url = "https://api.apr.dev"
