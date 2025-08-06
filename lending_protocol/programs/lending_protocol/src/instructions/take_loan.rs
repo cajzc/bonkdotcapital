@@ -112,7 +112,6 @@ pub struct TakeLoan<'info> {
         space = 8 + 32 + 32 + 32 + 8 + 1 + 1,
         seeds = [b"collateral_vault", loan_info.key().as_ref(), borrower.key().as_ref()],
         bump,
-        has_one = borrower
     )]
     /// Stores the collateral token and metadata
     pub collateral_vault: Account<'info, CollateralVault>,
