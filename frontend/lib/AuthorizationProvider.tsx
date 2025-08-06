@@ -11,7 +11,7 @@ import { PublicKey } from '@solana/web3.js';
 import { toUint8Array } from 'js-base64';
 import React, { ReactNode, useCallback, useMemo, useState } from 'react';
 
-import { RPC_ENDPOINT } from '../constants/RpcConnection';
+import { RPC_ENDPOINT, CLUSTER } from '../constants/RpcConnection';
 
 export type Account = Readonly<{
   address: Base64EncodedAddress;

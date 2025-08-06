@@ -1,3 +1,5 @@
+global.Buffer = require('buffer').Buffer;
+
 import React, { useState } from 'react';
 import {
   View,
@@ -7,11 +9,17 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PublicKey } from '@solana/web3.js';
+import { useSolanaProgram } from '../../lib/Solana';
+import { useAuthorization } from '../../lib/AuthorizationProvider';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
+
 
 interface DropdownProps {
   placeholder: string;
@@ -32,17 +40,102 @@ const Dropdown: React.FC<DropdownProps> = ({ placeholder, value, onPress }) => {
 
 export default function BorrowScreen() {
   const insets = useSafeAreaInsets();
+  const { selectedAccount } = useAuthorization();
+  const { connection, wallet, program } = useSolanaProgram();
   const [bonkAmount, setBonkAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('');
   const [tokenAmount, setTokenAmount] = useState('');
   const [loanDuration, setLoanDuration] = useState('');
   const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handleSubmitRequest = async () => {
+    if (!connection || !wallet || !program) {
+      Alert.alert('Error', 'Solana connection or program not available. Please try again.');
+      return;
+    }
 
+    if (!selectedAccount?.publicKey) {
+      Alert.alert('Error', 'Please connect your wallet first');
+      return;
+    }
 
-  const handleSubmitRequest = () => {
-    // Handle submit borrow request logic
-    console.log('Submitting borrow request...');
+    if (!bonkAmount || !selectedToken || !tokenAmount) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // For demo purposes, we'll use placeholder values
+      // In a real app, you'd get these from the selected loan offer
+      const tokenMint = new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'); // BONK token mint
+      const lenderPublicKey = new PublicKey('11111111111111111111111111111111'); // Placeholder lender
+      const bump = 0; // Will be calculated by the program
+
+      // Find PDA for loan offer (you'd get this from the selected offer)
+      const [loanOfferPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('loan_offer'),
+          lenderPublicKey.toBuffer(),
+          tokenMint.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find PDA for loan
+      const [loanPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('loan'),
+          loanOfferPda.toBuffer(),
+          selectedAccount.publicKey.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find PDA for vault
+      const [vaultPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('vault'),
+          loanOfferPda.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find the borrower's token account for the mint
+      const borrowerTokenAccount = await getAssociatedTokenAddress(
+        tokenMint,
+        selectedAccount.publicKey,
+        false 
+      );
+      console.log('Borrower token account:', borrowerTokenAccount.toString());
+
+      const txSignature = await program.methods
+        .intializeAcceptLoan(bump)
+        .accounts({
+          loanOffer: loanOfferPda,
+          loan: loanPda,
+          borrowerTokenAccount: borrowerTokenAccount, 
+          vault: vaultPda,
+          borrower: selectedAccount.publicKey,
+          tokenMint: tokenMint,
+          tokenProgram: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+          systemProgram: new PublicKey('11111111111111111111111111111111'),
+          rent: new PublicKey('SysvarRent111111111111111111111111111111111'),
+          clock: new PublicKey('SysvarC1ock11111111111111111111111111111111'),
+        })
+        .rpc();
+
+      Alert.alert('Success', `Loan accepted! Signature: ${txSignature}`);
+      console.log('Loan accepted!', txSignature);
+
+    } catch (error: unknown) {
+      console.error('Error accepting loan:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Error', `Failed to accept loan: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -80,8 +173,8 @@ export default function BorrowScreen() {
               placeholder="Select token"
               value={selectedToken}
               onPress={() => {
-                // Handle token selection
-                console.log('Select token');
+                // For now, set a default token
+                setSelectedToken('BONK');
               }}
             />
           </View>
@@ -106,8 +199,8 @@ export default function BorrowScreen() {
               placeholder="Select duration"
               value={loanDuration}
               onPress={() => {
-                // Handle duration selection
-                console.log('Select duration');
+                // For now, set a default duration
+                setLoanDuration('30 days');
               }}
             />
           </View>
@@ -129,14 +222,20 @@ export default function BorrowScreen() {
         </View>
 
         {/* Submit Button */}
-        <TouchableOpacity style={styles.submitButtonContainer} onPress={handleSubmitRequest}>
+        <TouchableOpacity 
+          style={[styles.submitButtonContainer, isSubmitting && styles.submitButtonDisabled]} 
+          onPress={handleSubmitRequest}
+          disabled={isSubmitting}
+        >
           <LinearGradient
             colors={[Colors.info, Colors.purple]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.submitButton}
           >
-            <Text style={styles.submitButtonText}>Submit Borrow Request</Text>
+            <Text style={styles.submitButtonText}>
+              {isSubmitting ? 'Submitting...' : 'Submit Borrow Request'}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
 
@@ -283,5 +382,8 @@ const styles = StyleSheet.create({
   apyDescription: {
     fontSize: Typography.sm,
     color: Colors.textSecondary,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
 });

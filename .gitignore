@@ -4,3 +4,7 @@ node_modules/
 package.json
 .claude
 backend/scripts/
+.env
+.env.example
+DEPLOYMENT.md
+lending_protocol/

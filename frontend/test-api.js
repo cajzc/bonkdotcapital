@@ -1,4 +1,4 @@
-// Simple test to verify API client works in Node.js environment
+w// Simple test to verify API client works in Node.js environment
 const fetch = require('node-fetch');
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';

@@ -1,3 +1,5 @@
+global.Buffer = require('buffer').Buffer;
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,101 +10,109 @@ import {
   TextInput,
   Image,
   SafeAreaView,
-  ActivityIndicator,
-  RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, SemanticColors } from '../../constants';
 import ConnectButton from '@/components/ConnectButton';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSolanaProgram } from '../../lib/Solana';
+import { takeLoan, TakeLoanData } from '../../lib/instructions/TakeLoan';
 import { apiClient } from '../../lib/apiClient';
-import { wsClient } from '../../lib/websocketClient';
-import type { LoanOffer, LoanRequest, PlatformStats, WebSocketMessage } from '../../types/backend';
+import { router } from 'expo-router';
 
 interface RequestCardProps {
-  offer?: LoanOffer;
-  request?: LoanRequest;
+  userImage: string;
+  username: string;
+  rating: number;
   type: 'Lending' | 'Borrowing';
-  onViewDetails?: () => void;
+  amount: string;
+  collateral: string;
+  apy: string;
+  duration: string;
+  description: string;
+  comments: number;
+  onPress?: () => void;
 }
 
-// Helper functions
-const formatNumber = (num: number): string => {
-  if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
-  if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-  return num.toString();
-};
-
-const shortenAddress = (address: string): string => {
-  if (!address) return 'Unknown';
-  return `${address.slice(0, 4)}...${address.slice(-4)}`;
-};
-
-const formatDuration = (days: number): string => {
-  if (days >= 365) return `${Math.floor(days / 365)} year${days >= 730 ? 's' : ''}`;
-  if (days >= 30) return `${Math.floor(days / 30)} month${days >= 60 ? 's' : ''}`;
-  return `${days} day${days !== 1 ? 's' : ''}`;
-};
-
 const RequestCard: React.FC<RequestCardProps> = ({
-  offer,
-  request,
+  userImage,
+  username,
+  rating,
   type,
-  onViewDetails,
+  amount,
+  collateral,
+  apy,
+  duration,
+  description,
+  comments,
+  onPress,
 }) => {
   const isLending = type === 'Lending';
-  const data = isLending ? offer : request;
-  
-  if (!data) return null;
-  
-  // Extract data based on type with safe nullable handling
-  const username = isLending 
-    ? shortenAddress(offer?.lender_address || 'Unknown')
-    : shortenAddress(request?.borrower_address || 'Unknown');
-  
-  // Use new fields with fallbacks to old fields, all nullable-safe
-  const loanAmount = isLending 
-    ? (offer?.loan_amount || offer?.amount || 0)
-    : (request?.loan_amount || request?.amount || 0);
-  const loanName = isLending 
-    ? (offer?.loan_name || 'BONK')
-    : (request?.loan_name || 'BONK');
-  const amount = `${formatNumber(loanAmount)} ${loanName}`;
-  
-  const collateralAmount = isLending 
-    ? (offer?.collateral_amount || 0)
-    : (request?.collateral_amount || 0);
-  const collateralName = isLending 
-    ? (offer?.collateral_name || offer?.token || 'Unknown')
-    : (request?.collateral_name || request?.collateral_token || 'Unknown');
-  const collateral = collateralAmount > 0 
-    ? `${formatNumber(collateralAmount)} ${collateralName}`
-    : collateralName;
-  
-  const apy = isLending 
-    ? (offer?.apy || 0).toFixed(1) 
-    : (request?.max_apy || 0).toFixed(1);
-  const duration = formatDuration(isLending ? (offer?.duration || 0) : (request?.duration || 0));
-  const isActive = isLending ? (offer?.is_active ?? false) : (request?.is_active ?? false);
-  const description = isLending 
-    ? `${isActive ? 'Active' : 'Inactive'} lending offer • Collateral: ${collateralName}`
-    : `${isActive ? 'Active' : 'Inactive'} borrowing request • Collateral: ${collateralName}`;
+  const { selectedAccount } = useAuthorization();
+  const { connection, wallet, program } = useSolanaProgram();
+  const [isBorrowing, setIsBorrowing] = useState(false);
+
+  const handleBorrow = async () => {
+    console.log('handleBorrow called');
+    console.log('Connection:', !!connection);
+    console.log('Wallet:', !!wallet);
+    console.log('Program:', !!program);
+    console.log('Selected Account:', !!selectedAccount);
+    console.log('Selected Account Public Key:', selectedAccount?.publicKey?.toString());
+
+    if (!connection || !wallet || !program) {
+      Alert.alert('Error', 'Solana connection or program not available. Please try again.');
+      return;
+    }
+
+    if (!selectedAccount?.publicKey) {
+      Alert.alert('Error', 'Please connect your wallet first');
+      return;
+    }
+
+    setIsBorrowing(true);
+    try {
+      // TODO: hardcoded - replace with actual loan offer data from the selected offer
+      const takeLoanData: TakeLoanData = {
+        tokenMint: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', // TODO: hardcoded - should be the token mint from the selected loan offer
+        lenderPublicKey: '6eomfGH6F4ovsd1FN6ccwfpt6uwzeL6rcLyD2HBYVpfm', // TODO: hardcoded - should be the lender's public key from the selected loan offer
+        amount: amount,
+      };
+
+      console.log('Calling takeLoan with data:', takeLoanData);
+      console.log('Borrower public key:', selectedAccount.publicKey.toString());
+
+      const signature = await takeLoan(
+        program,
+        connection,
+        wallet,
+        selectedAccount.publicKey,
+        takeLoanData
+      );
+      
+      console.log('Loan taken! Signature:', signature);
+      Alert.alert('Success', `Loan taken! You can now borrow ${amount}`);
+
+    } catch (error: any) {
+      console.error('Error taking loan:', error);
+      Alert.alert('Error', `Failed to take loan: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsBorrowing(false);
+    }
+  };
   
   return (
-    <View style={styles.requestCard}>
+    <TouchableOpacity style={styles.requestCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.requestHeader}>
         <View style={styles.userInfo}>
-          <View style={styles.userAvatar}>
-            <Ionicons name="person" size={20} color={Colors.textSecondary} />
-          </View>
+          <Image source={{ uri: userImage }} style={styles.userImage} />
           <View style={styles.userDetails}>
             <Text style={styles.username}>{username}</Text>
             <View style={styles.ratingContainer}>
-              <Ionicons name="shield-checkmark" size={14} color={Colors.success} />
-              <Text style={styles.rating}>Verified</Text>
+              <Ionicons name="star" size={14} color={Colors.warning} />
+              <Text style={styles.rating}>{rating}</Text>
             </View>
           </View>
         </View>
@@ -124,7 +134,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
           <Text style={styles.collateral}>{collateral}</Text>
         </View>
         <View style={styles.apyRow}>
-          <Text style={styles.apy}>{apy}% APY</Text>
+          <Text style={styles.apy}>{apy} APY</Text>
           <Text style={styles.duration}>{duration}</Text>
         </View>
       </View>
@@ -134,121 +144,115 @@ const RequestCard: React.FC<RequestCardProps> = ({
       <View style={styles.cardFooter}>
         <View style={styles.commentsContainer}>
           <Ionicons name="chatbubble-outline" size={16} color={Colors.textSecondary} />
-          <Text style={styles.commentsCount}>0</Text>
+          <Text style={styles.commentsCount}>{comments}</Text>
         </View>
-        <TouchableOpacity style={styles.viewDetailsButton} onPress={onViewDetails}>
-          <Text style={styles.viewDetailsText}>View Details</Text>
-        </TouchableOpacity>
+                 <View style={styles.buttonContainer}>
+           {isLending && selectedAccount?.publicKey && (
+             <TouchableOpacity 
+               style={[styles.borrowButton, isBorrowing && styles.borrowButtonDisabled]}
+               onPress={handleBorrow}
+               disabled={isBorrowing}
+             >
+               <Text style={styles.borrowButtonText}>
+                 {isBorrowing ? 'Borrowing...' : 'Borrow'}
+               </Text>
+             </TouchableOpacity>
+           )}
+           <TouchableOpacity 
+             style={styles.viewDetailsButton}
+             onPress={(e) => {
+               e.stopPropagation();
+               onPress?.();
+             }}
+           >
+             <Text style={styles.viewDetailsText}>View Details</Text>
+           </TouchableOpacity>
+         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
 export default function FeedScreen() {
   const { selectedAccount } = useAuthorization();
-  const insets = useSafeAreaInsets();
-  
-  const [offers, setOffers] = useState<LoanOffer[]>([]);
-  const [requests, setRequests] = useState<LoanRequest[]>([]);
-  const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [offers, setOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [platformStats, setPlatformStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const insets = useSafeAreaInsets();
 
-  const fetchData = async () => {
+  // Load offers from backend
+  const loadOffers = async () => {
     try {
-      const [offersData, requestsData, statsData] = await Promise.all([
-        apiClient.getLoanOffers(),
-        apiClient.getLoanRequests(),
-        apiClient.getPlatformStats()
-      ]);
-      
-      setOffers(offersData || []);
-      setRequests(requestsData || []);
-      setStats(statsData);
-    } catch (error) {
-      console.error('Error fetching feed data:', error);
+      setLoading(true);
+      setError(null);
+      const response = await apiClient.getLoanOffers();
+      setOffers(response);
+      console.log('Loaded offers:', response);
+    } catch (err: any) {
+      console.error('Failed to load offers:', err);
+      setError(err.message || 'Failed to load offers');
     } finally {
       setLoading(false);
-      setRefreshing(false);
+    }
+  };
+
+  // Load platform stats from backend
+  const loadPlatformStats = async () => {
+    try {
+      setStatsLoading(true);
+      const response = await apiClient.getPlatformStats();
+      setPlatformStats(response);
+      console.log('Loaded platform stats for feed:', response);
+    } catch (err: any) {
+      console.error('Failed to load platform stats:', err);
+      // Set fallback stats if API fails
+      setPlatformStats({
+        total_volume: 0,
+        average_apy: 0,
+        active_loans_count: 0,
+      });
+    } finally {
+      setStatsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-
-    // Try to subscribe to WebSocket updates, but don't fail if it doesn't work
-    let unsubscribe: (() => void) | null = null;
-    
-    try {
-      unsubscribe = wsClient.subscribe('offers', (message: WebSocketMessage) => {
-        console.log('WebSocket message received:', message);
-        
-        if (message.type === 'offer_created') {
-          setOffers(prevOffers => [message.data, ...prevOffers]);
-          fetchStats();
-        }
-      });
-    } catch (error) {
-      console.log('WebSocket connection failed, will rely on manual refresh:', error);
-    }
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
+    loadOffers();
+    loadPlatformStats();
   }, []);
 
-  const fetchStats = async () => {
-    try {
-      const statsData = await apiClient.getPlatformStats();
-      setStats(statsData);
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
+  // Helper function to format volume
+  const formatVolume = (volume: number) => {
+    if (volume >= 1e9) return `${(volume / 1e9).toFixed(1)}B`;
+    if (volume >= 1e6) return `${(volume / 1e6).toFixed(1)}M`;
+    if (volume >= 1e3) return `${(volume / 1e3).toFixed(1)}K`;
+    return volume.toString();
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchData();
+  // Convert backend offer to RequestCard props
+  const formatOfferForCard = (offer: any) => {
+    const durationDays = Math.floor((offer.duration || 0) / (24 * 60 * 60));
+    return {
+      userImage: "https://via.placeholder.com/40", // Default avatar
+      username: `${offer.lender_address?.slice(0, 6) || 'Unknown'}...${offer.lender_address?.slice(-4) || ''}`,
+      rating: 4.5, // Default rating for now
+      type: 'Lending' as const,
+      amount: `${(offer.loan_amount || 0).toLocaleString()} ${offer.loan_name || offer.token || 'BONK'}`,
+      collateral: `${offer.collateral_name || 'SOL'} Required`,
+      apy: `${offer.apy || 0}%`,
+      duration: `${durationDays} days`,
+      description: `Lending ${offer.loan_name || offer.token || 'BONK'} tokens. Click for more details.`,
+      comments: 0, // Will load from backend later
+      onPress: () => {
+        router.push({
+          pathname: '/offer-details',
+          params: { offerId: offer.id }
+        });
+      }
+    };
   };
-
-  const handleViewDetails = (type: 'offer' | 'request', id: string) => {
-    if (type === 'offer') {
-      router.push(`/offer-details?offerId=${id}`);
-    } else if (type === 'request') {
-      router.push(`/request-details?requestId=${id}`);
-    }
-  };
-
-  // Combine offers and requests for display
-  const allItems = [
-    ...offers.map(offer => ({ type: 'offer' as const, data: offer })),
-    ...requests.map(request => ({ type: 'request' as const, data: request }))
-  ];
-
-  const filteredItems = allItems.filter(item => {
-    const searchTerm = searchQuery.toLowerCase();
-    if (item.type === 'offer') {
-      return item.data.lender_address.toLowerCase().includes(searchTerm) ||
-             item.data.token.toLowerCase().includes(searchTerm);
-    } else {
-      return item.data.borrower_address.toLowerCase().includes(searchTerm) ||
-             item.data.collateral_token.toLowerCase().includes(searchTerm);
-    }
-  });
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading offers and requests...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -270,7 +274,9 @@ export default function FeedScreen() {
             <View style={styles.activeDot} />
           </View>
           <Text style={styles.statLabel}>Active</Text>
-          <Text style={styles.statValue}>{stats?.active_loans_count || 0}</Text>
+          <Text style={styles.statValue}>
+            {statsLoading ? "..." : (platformStats?.active_loans_count || 0).toLocaleString()}
+          </Text>
         </View>
         
         <View style={styles.statCard}>
@@ -278,7 +284,9 @@ export default function FeedScreen() {
             <Ionicons name="trending-up" size={20} color={Colors.success} />
           </View>
           <Text style={styles.statLabel}>Avg APY</Text>
-          <Text style={styles.statValue}>{stats?.average_apy ? `${stats.average_apy.toFixed(1)}%` : '0%'}</Text>
+          <Text style={styles.statValue}>
+            {statsLoading ? "..." : `${(platformStats?.average_apy || 0).toFixed(1)}%`}
+          </Text>
         </View>
         
         <View style={styles.statCard}>
@@ -286,7 +294,9 @@ export default function FeedScreen() {
             <Ionicons name="link" size={20} color={Colors.primary} />
           </View>
           <Text style={styles.statLabel}>Volume</Text>
-          <Text style={styles.statValue}>{stats?.total_volume ? formatNumber(stats.total_volume) : '0'}</Text>
+          <Text style={styles.statValue}>
+            {statsLoading ? "..." : formatVolume(platformStats?.total_volume || 0)}
+          </Text>
         </View>
       </View>
 
@@ -296,10 +306,8 @@ export default function FeedScreen() {
           <Ionicons name="search" size={20} color={Colors.textTertiary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search offers and requests..."
+            placeholder="Search requests..."
             placeholderTextColor={Colors.textTertiary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
           />
         </View>
         <TouchableOpacity style={styles.filterButton}>
@@ -312,28 +320,33 @@ export default function FeedScreen() {
         style={styles.feedContainer} 
         contentContainerStyle={styles.feedContentContainer}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
       >
-        {filteredItems.length > 0 ? (
-          filteredItems.map((item, index) => (
-            <RequestCard
-              key={`${item.type}-${item.data.id || index}`}
-              offer={item.type === 'offer' ? item.data as LoanOffer : undefined}
-              request={item.type === 'request' ? item.data as LoanRequest : undefined}
-              type={item.type === 'offer' ? 'Lending' : 'Borrowing'}
-              onViewDetails={() => handleViewDetails(item.type, item.data.id || '')}
-            />
-          ))
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="document-outline" size={48} color={Colors.textTertiary} />
-            <Text style={styles.emptyTitle}>No offers or requests found</Text>
-            <Text style={styles.emptySubtitle}>
-              {searchQuery ? 'Try adjusting your search terms' : 'Check back later for new activity'}
-            </Text>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading offers...</Text>
           </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={loadOffers}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : offers.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No loan offers available yet.</Text>
+            <Text style={styles.emptySubtext}>Create the first offer to get started!</Text>
+          </View>
+        ) : (
+          offers.map((offer, index) => {
+            const cardProps = formatOfferForCard(offer);
+            return (
+              <RequestCard
+                key={offer.id || index}
+                {...cardProps}
+              />
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>
@@ -595,43 +608,89 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
+  buttonContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: Spacing.md,
+    gap: Spacing.sm,
+  },
+  payLoanButton: {
+    backgroundColor: Colors.success,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    ...Shadows.primary,
+  },
+  payLoanButtonDisabled: {
+    opacity: 0.6,
+  },
+  payLoanButtonText: {
+    color: Colors.textLight,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  borrowButton: {
+    backgroundColor: Colors.info,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    ...Shadows.primary,
+  },
+  borrowButtonDisabled: {
+    opacity: 0.6,
+  },
+  borrowButtonText: {
+    color: Colors.textLight,
+    fontWeight: '600',
+    fontSize: 12,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.xl,
+    paddingVertical: Spacing.xxl,
   },
   loadingText: {
     fontSize: Typography.base,
     color: Colors.textSecondary,
-    marginTop: Spacing.md,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Spacing.xxl,
+  },
+  errorText: {
+    fontSize: Typography.base,
+    color: Colors.error,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  retryButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  retryButtonText: {
+    color: Colors.textLight,
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.medium,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.xxl,
-    marginTop: 60,
+    paddingVertical: Spacing.xxl,
   },
-  emptyTitle: {
+  emptyText: {
     fontSize: Typography.lg,
-    fontWeight: FontWeight.semibold,
-    color: Colors.textPrimary,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  emptySubtitle: {
-    fontSize: Typography.base,
     color: Colors.textSecondary,
     textAlign: 'center',
+    marginBottom: Spacing.sm,
   },
-});
+  emptySubtext: {
+    fontSize: Typography.base,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+  },
+});  

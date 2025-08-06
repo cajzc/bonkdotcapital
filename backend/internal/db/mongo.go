@@ -31,7 +31,8 @@ func InitCollections(db *mongo.Database) {
 // CreateOffer inserts a new loan offer into the database
 func CreateOffer(offer *models.LoanOffer) (*models.LoanOffer, error) {
 	offer.ID = primitive.NewObjectID()
-	offer.CreatedAt = time.Now()
+	now := time.Now()
+	offer.CreatedAt = &now
 	_, err := offersCollection.InsertOne(context.TODO(), offer)
 	if err != nil {
 		return nil, err

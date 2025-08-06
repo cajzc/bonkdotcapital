@@ -19,8 +19,8 @@ func main() {
 	// --- Database Connection ---
 	mongoURI := os.Getenv("MONGO_URI")
 	if mongoURI == "" {
-		mongoURI = "mongodb://localhost:27018"
-		log.Println("MONGO_URI not set, defaulting to localhost:27018.")
+		mongoURI = "mongodb://localhost:27017"
+		log.Println("MONGO_URI not set, defaulting to localhost:27017.")
 	}
 
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoURI))

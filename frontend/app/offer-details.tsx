@@ -107,7 +107,18 @@ export default function OfferDetailsScreen() {
           
           // The backend sends the comment object directly, so treat the message as a comment
           if (message && message.id && message.content) {
-            setComments(prevComments => [message, ...prevComments]);
+            setComments(prevComments => {
+              // Check if comment already exists to prevent duplicates (by ID)
+              const commentExists = prevComments.some(comment => 
+                comment.id === message.id || 
+                (comment.content === message.content && comment.author === message.author)
+              );
+              
+              if (!commentExists) {
+                return [message, ...prevComments];
+              }
+              return prevComments;
+            });
           }
         });
       } catch (error) {
@@ -134,17 +145,44 @@ export default function OfferDetailsScreen() {
       // TODO: Remove this temporary test address when wallet is required again
       const testAddress = selectedAccount?.address || 'test-user-' + Math.random().toString(36).substr(2, 9);
       
-      const comment = await apiClient.createComment(offerId, {
+      // Create optimistic comment with temporary ID
+      const tempId = `temp-${Date.now()}-${Math.random()}`;
+      const optimisticComment = {
+        id: tempId,
         author: testAddress,
         content: newComment.trim(),
+        created_at: new Date().toISOString(),
+        isOptimistic: true,
+      };
+      
+      // Add optimistic comment immediately
+      setComments(prevComments => [optimisticComment, ...prevComments]);
+      setNewComment('');
+      
+      // Send to backend
+      const realComment = await apiClient.createComment(offerId, {
+        author: testAddress,
+        content: optimisticComment.content,
       });
       
-      setNewComment('');
-      // Comment will be added via WebSocket, but add immediately for better UX
-      setComments(prevComments => [comment, ...prevComments]);
+      // Replace optimistic comment with real one (WebSocket won't add it again due to duplicate check)
+      setComments(prevComments => 
+        prevComments.map(comment => 
+          comment.id === tempId ? realComment : comment
+        )
+      );
+      
     } catch (error) {
       console.error('Error creating comment:', error);
       Alert.alert('Error', 'Failed to post comment');
+      
+      // Remove optimistic comment on error
+      setComments(prevComments => 
+        prevComments.filter(comment => !comment.isOptimistic)
+      );
+      
+      // Restore the comment text for retry
+      setNewComment(newComment);
     } finally {
       setSubmittingComment(false);
     }
@@ -280,8 +318,8 @@ export default function OfferDetailsScreen() {
             {/* Comments List */}
             <View style={styles.commentsList}>
               {comments.length > 0 ? (
-                comments.map((comment) => (
-                  <CommentItem key={comment.id} comment={comment} />
+                comments.map((comment, index) => (
+                  <CommentItem key={comment.id || `comment-${index}`} comment={comment} />
                 ))
               ) : (
                 <View style={styles.noCommentsContainer}>

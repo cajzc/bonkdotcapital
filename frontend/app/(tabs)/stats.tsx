@@ -5,8 +5,6 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  ActivityIndicator,
-  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
@@ -74,71 +72,48 @@ const TokenProgress: React.FC<TokenProgressProps> = ({ token, percentage, color 
   );
 };
 
-// Helper functions
-const formatNumber = (num: number): string => {
-  if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
-  if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-  return num.toString();
-};
-
-const shortenAddress = (address: string): string => {
-  if (!address) return 'Unknown';
-  return `${address.slice(0, 4)}...${address.slice(-4)}`;
-};
-
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStats = async () => {
+  // Load platform stats from backend
+  const loadStats = async () => {
     try {
+      setLoading(true);
       setError(null);
-      const platformStats = await apiClient.getPlatformStats();
-      setStats(platformStats);
-    } catch (err) {
-      setError('Failed to load platform statistics');
-      console.error('Error fetching platform stats:', err);
+      const response = await apiClient.getPlatformStats();
+      setStats(response);
+      console.log('Loaded stats:', response);
+    } catch (err: any) {
+      console.error('Failed to load stats:', err);
+      setError(err.message || 'Failed to load stats');
+      // Use fallback stats if API fails
+      setStats({
+        total_volume: 0,
+        average_apy: 0,
+        active_loans_count: 0,
+        top_lenders: [],
+        popular_collaterals: ['SOL', 'BONK'],
+      });
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchStats();
+    loadStats();
   }, []);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchStats();
+  // Helper functions for formatting
+  const formatVolume = (volume: number) => {
+    if (volume >= 1e9) return `${(volume / 1e9).toFixed(1)}B`;
+    if (volume >= 1e6) return `${(volume / 1e6).toFixed(1)}M`;
+    if (volume >= 1e3) return `${(volume / 1e3).toFixed(1)}K`;
+    return volume.toString();
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading platform statistics...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={48} color={Colors.error} />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-  
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -147,31 +122,25 @@ export default function StatsScreen() {
         <Text style={styles.subtitle}>Platform statistics and trends</Text>
       </View>
 
-      <ScrollView 
-        style={styles.content} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Key Statistics Grid */}
         <View style={styles.statsGrid}>
           <StatCard
             icon="link"
             iconColor={Colors.primary}
-            value={formatNumber(stats?.total_volume || 0)}
-            label="Total BONK Lent"
+            value={loading ? "..." : formatVolume(stats?.total_volume || 0)}
+            label="Total Volume"
           />
           <StatCard
             icon="trending-up"
             iconColor={Colors.success}
-            value={stats?.average_apy ? `${stats.average_apy.toFixed(1)}%` : '0%'}
+            value={loading ? "..." : `${(stats?.average_apy || 0).toFixed(1)}%`}
             label="Avg APY"
           />
           <StatCard
             icon="people"
             iconColor={Colors.info}
-            value={stats?.active_loans_count?.toString() || '0'}
+            value={loading ? "..." : (stats?.active_loans_count || 0).toLocaleString()}
             label="Active Loans"
           />
           <StatCard
@@ -186,18 +155,20 @@ export default function StatsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Top Lenders</Text>
           <View style={styles.lendersList}>
-            {stats?.top_lenders && stats.top_lenders.length > 0 ? (
-              stats.top_lenders.map((lender, index) => (
+            {loading ? (
+              <Text style={styles.loadingText}>Loading top lenders...</Text>
+            ) : stats?.top_lenders && stats.top_lenders.length > 0 ? (
+              stats.top_lenders.slice(0, 3).map((lender, index) => (
                 <TopLender
                   key={lender.address}
                   rank={index + 1}
-                  username={shortenAddress(lender.address)}
-                  amountLent="N/A"
+                  username={`${lender.address.slice(0, 6)}...${lender.address.slice(-4)}`}
+                  amountLent="N/A" // Volume data not available yet
                   avgApy={`${lender.apy.toFixed(1)}%`}
                 />
               ))
             ) : (
-              <Text style={styles.emptyText}>No lenders data available</Text>
+              <Text style={styles.emptyText}>No top lenders data available yet.</Text>
             )}
           </View>
         </View>
@@ -206,17 +177,23 @@ export default function StatsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Popular Collateral Tokens</Text>
           <View style={styles.tokensList}>
-            {stats?.popular_collaterals && stats.popular_collaterals.length > 0 ? (
-              stats.popular_collaterals.map((token, index) => (
-                <TokenProgress
-                  key={token}
-                  token={token}
-                  percentage={Math.max(10, 100 - (index * 20))} // Mock percentage for now
-                  color={index === 0 ? Colors.purple : index === 1 ? Colors.info : Colors.success}
-                />
-              ))
+            {loading ? (
+              <Text style={styles.loadingText}>Loading collateral data...</Text>
+            ) : stats?.popular_collaterals && stats.popular_collaterals.length > 0 ? (
+              stats.popular_collaterals.slice(0, 3).map((token, index) => {
+                const colors = [Colors.purple, Colors.info, Colors.success];
+                const percentages = [45, 28, 19]; // Mock percentages for now
+                return (
+                  <TokenProgress
+                    key={token}
+                    token={token}
+                    percentage={percentages[index] || 10}
+                    color={colors[index] || Colors.primary}
+                  />
+                );
+              })
             ) : (
-              <Text style={styles.emptyText}>No token data available</Text>
+              <Text style={styles.emptyText}>No collateral data available yet.</Text>
             )}
           </View>
         </View>
@@ -366,33 +343,17 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     minWidth: 35,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
   loadingText: {
     fontSize: Typography.base,
     color: Colors.textSecondary,
-    marginTop: Spacing.md,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  errorText: {
-    fontSize: Typography.base,
-    color: Colors.error,
-    marginTop: Spacing.md,
     textAlign: 'center',
+    paddingVertical: Spacing.lg,
   },
   emptyText: {
     fontSize: Typography.base,
-    color: Colors.textSecondary,
+    color: Colors.textTertiary,
     textAlign: 'center',
+    paddingVertical: Spacing.lg,
     fontStyle: 'italic',
   },
 });
