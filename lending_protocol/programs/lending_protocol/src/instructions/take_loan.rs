@@ -29,7 +29,7 @@ pub fn take_loan(ctx: Context<TakeLoan>) -> Result<()> {
             Errors::InvalidCollateralToken
         );
     }
-    require!(ctx.accounts.loan_info.is_active, Errors::OfferNotActive);
+    require!(!ctx.accounts.loan_info.is_active, Errors::OfferNotActive);
     // FIXME: always passes
     let clock = Clock::get()?;
     require!(
