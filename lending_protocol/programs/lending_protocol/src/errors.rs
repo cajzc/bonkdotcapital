@@ -3,7 +3,11 @@ use anchor_lang::prelude::*;
 #[error_code]
 pub enum Errors {
     #[msg("Loan amount must be greater than zero")]
-    InvalidAmount,
+    InvalidLoanAmount,
+    #[msg("Collateral amount must be greater than zero")]
+    InvalidCollateralAmount,
+    #[msg("Supplied token not accepted as collateral")]
+    InvalidCollateralToken,
     #[msg("Not enough tokens for collateral")]
     CollateralNotEnough,
     #[msg("Interest rate must be greater than zero")]
