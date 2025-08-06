@@ -1,6 +1,6 @@
 use crate::{
     errors::Errors,
-    state::{borrower_profile::BorrowerProfile, loan::{OpenLoan, LoanInfo}, collateral::CollateralVault},
+    state::{loan::{OpenLoan, LoanInfo}, collateral::CollateralVault},
 };
 use anchor_lang::prelude::*;
 use anchor_spl::{
@@ -37,7 +37,8 @@ pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
     open_loan.borrower = ctx.accounts.borrower.key();
     open_loan.principal = ctx.accounts.loan_info.amount;
     open_loan.start_time = ctx.accounts.clock.unix_timestamp;
-    open_loan.repay_by_time = ctx.accounts.clock.unix_timestamp + ctx.accounts.loan_info.duration_seconds;
+    // FIXME: Casting
+    open_loan.repay_by_time = ctx.accounts.clock.unix_timestamp + ctx.accounts.loan_info.duration_seconds as i64; 
     open_loan.is_repaid = false;
     open_loan.bump = ctx.bumps.open_loan;
 
@@ -65,11 +66,12 @@ pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
         collateral_vault.amount,
         collateral_vault.token_mint
     );
-    
+
     // Transfer loan amount from vault to borrower
+    let loan_info = ctx.accounts.loan_info.key();
     let seeds = &[
         b"vault",
-        ctx.accounts.loan_info.key().as_ref(),
+        loan_info.as_ref(),
         &[ctx.bumps.loan_info],
     ];
     let signer = &[&seeds[..]];
@@ -123,23 +125,23 @@ pub struct TakeLoan<'info> {
         associated_token::token_program = token_program,
     )]
     pub borrower_token_account: InterfaceAccount<'info, TokenAccount>,
-    
+
     #[account(
         mut,
         token::mint = loan_info.loan_token_mint,
-        token::authority = loan_info, 
+        token::authority = loan_info,
         seeds = [b"vault", loan_info.key().as_ref()],
         bump
     )]
     /// Holds the tokens sent out for a loan prior to a second party borrowing
     pub vault: InterfaceAccount<'info, TokenAccount>,
-    
+
     #[account(
         mut,
         seeds = [b"loan_info", lender.key().as_ref(), token_mint.key().as_ref()],
         bump
     )]
-    /// Stores metadata about the loan offer
+    /// Stores metadata about the loan info 
     pub loan_info: Account<'info, LoanInfo>,
 
     #[account(mut)]
