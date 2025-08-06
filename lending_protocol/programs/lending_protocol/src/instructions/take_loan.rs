@@ -8,16 +8,30 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount, TokenInterface},
     associated_token::AssociatedToken
 };
+use std::str::FromStr;
 
 
 pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
-    let clock = Clock::get()?;
-    require!(
-        ctx.accounts.borrower_token_account.amount < collateral_amount,
-        Errors::CollateralNotEnough
-    );
+    // The loaner wants sol as collateral
+    if ctx.accounts.loan_info.collateral_token_mint.key() == Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap() {
+        require!(
+            ctx.accounts.borrower.lamports() >= collateral_amount,
+            Errors::CollateralNotEnough
+        );
+    } else {
+        // The loaner wants tokens as collateral
+        require!(
+            ctx.accounts.borrower_token_account.amount >= collateral_amount,
+            Errors::CollateralNotEnough
+        );
+        require!(
+            ctx.accounts.token_mint.key() == ctx.accounts.loan_info.collateral_token_mint.key(),
+            Errors::InvalidCollateralToken
+        );
+    }
     require!(ctx.accounts.loan_info.is_active, Errors::OfferNotActive);
     // FIXME: always passes
+    let clock = Clock::get()?;
     require!(
         clock.unix_timestamp <= ctx.accounts.loan_info.duration_seconds as i64 + clock.unix_timestamp,
         Errors::LoanOfferExpired
@@ -35,7 +49,7 @@ pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
     let open_loan = &mut ctx.accounts.open_loan;
     open_loan.loan_info = ctx.accounts.loan_info.key();
     open_loan.borrower = ctx.accounts.borrower.key();
-    open_loan.principal = ctx.accounts.loan_info.amount;
+    open_loan.principal = ctx.accounts.loan_info.loan_amount;
     open_loan.start_time = ctx.accounts.clock.unix_timestamp;
     // FIXME: Casting
     open_loan.repay_by_time = ctx.accounts.clock.unix_timestamp + ctx.accounts.loan_info.duration_seconds as i64;
@@ -43,13 +57,31 @@ pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
     open_loan.bump = ctx.bumps.open_loan;
 
     // Deposit the collateral
-    let cpi_accounts = Transfer {
-        from: ctx.accounts.borrower_token_account.to_account_info(),
-        to: ctx.accounts.collateral_vault.to_account_info(),
-        authority: ctx.accounts.borrower.to_account_info(),
-    };
-    let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
-    anchor_spl::token::transfer(cpi_ctx, collateral_amount)?;
+
+    // The loaner wants sol as collateral
+    if ctx.accounts.loan_info.collateral_token_mint.key() == Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap() {
+        let ix = solana_program::system_instruction::transfer(
+            &ctx.accounts.borrower.key(),
+            &ctx.accounts.collateral_vault.key(),
+            collateral_amount,
+        );
+        solana_program::program::invoke(
+            &ix,
+            &[
+                ctx.accounts.borrower.to_account_info(),
+                ctx.accounts.collateral_vault.to_account_info(),
+            ],
+        )?;
+    } else {
+        // The loaner wants tokens as collateral
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.borrower_token_account.to_account_info(),
+            to: ctx.accounts.collateral_vault.to_account_info(),
+            authority: ctx.accounts.borrower.to_account_info(),
+        };
+        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
+        anchor_spl::token::transfer(cpi_ctx, collateral_amount)?;
+    }
 
     // Create the collateral vault
     let collateral_vault = &mut ctx.accounts.collateral_vault;
@@ -82,12 +114,12 @@ pub fn take_loan(ctx: Context<TakeLoan>, collateral_amount: u64) -> Result<()> {
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
     let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-    anchor_spl::token::transfer(cpi_ctx, ctx.accounts.loan_info.amount)?;
+    anchor_spl::token::transfer(cpi_ctx, ctx.accounts.loan_info.loan_amount)?;
 
     msg!(
         "Loan taken: Borrower {} received {} from offer {}",
         ctx.accounts.borrower.key(),
-        ctx.accounts.loan_info.amount,
+        ctx.accounts.loan_info.loan_amount,
         ctx.accounts.loan_info.key()
     );
 
