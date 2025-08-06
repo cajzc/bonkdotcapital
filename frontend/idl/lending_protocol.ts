@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/lending_protocol.json`.
  */
 export type LendingProtocol = {
-  "address": "5KZEGGgKN8FEKXHvqjJ169Adxdkj2JmNVNfHdRBytsvS",
+  "address": "FJUYYdAmHJ996KqUen7jiD2AgbP3pgTU6KzRz28Lhhhn",
   "metadata": {
     "name": "lendingProtocol",
     "version": "0.1.0",
