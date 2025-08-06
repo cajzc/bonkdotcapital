@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/lending_protocol.json`.
  */
 export type LendingProtocol = {
-  "address": "CJWBGwKzTSXZekNAjHYWtkbTyT76ka75zioZuzSxxMZG",
+  "address": "5KZEGGgKN8FEKXHvqjJ169Adxdkj2JmNVNfHdRBytsvS",
   "metadata": {
     "name": "lendingProtocol",
     "version": "0.1.0",
@@ -143,6 +143,119 @@ export type LendingProtocol = {
       ]
     },
     {
+      "name": "initializeObligation",
+      "discriminator": [
+        93,
+        178,
+        46,
+        182,
+        79,
+        238,
+        67,
+        69
+      ],
+      "accounts": [
+        {
+          "name": "obligation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  98,
+                  108,
+                  105,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "borrower"
+              }
+            ]
+          }
+        },
+        {
+          "name": "borrowerTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "collateralVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  108,
+                  108,
+                  97,
+                  116,
+                  101,
+                  114,
+                  97,
+                  108,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "borrower"
+              },
+              {
+                "kind": "account",
+                "path": "tokenMint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenMint"
+        },
+        {
+          "name": "borrower",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "initializePayLoan",
       "discriminator": [
         123,
@@ -212,6 +325,70 @@ export type LendingProtocol = {
           }
         },
         {
+          "name": "obligation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  98,
+                  108,
+                  105,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "borrower"
+              }
+            ]
+          }
+        },
+        {
+          "name": "collateralVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  108,
+                  108,
+                  97,
+                  116,
+                  101,
+                  114,
+                  97,
+                  108,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "borrower"
+              },
+              {
+                "kind": "account",
+                "path": "tokenMint"
+              }
+            ]
+          }
+        },
+        {
           "name": "borrowerTokenAccount",
           "writable": true
         },
@@ -224,7 +401,8 @@ export type LendingProtocol = {
           "writable": true,
           "signer": true,
           "relations": [
-            "loan"
+            "loan",
+            "obligation"
           ]
         },
         {
@@ -315,6 +493,33 @@ export type LendingProtocol = {
           }
         },
         {
+          "name": "obligation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  98,
+                  108,
+                  105,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "borrower"
+              }
+            ]
+          }
+        },
+        {
           "name": "borrowerTokenAccount",
           "writable": true
         },
@@ -328,7 +533,10 @@ export type LendingProtocol = {
         {
           "name": "borrower",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "obligation"
+          ]
         },
         {
           "name": "tokenMint",
@@ -387,6 +595,19 @@ export type LendingProtocol = {
         126,
         158
       ]
+    },
+    {
+      "name": "obligation",
+      "discriminator": [
+        168,
+        206,
+        141,
+        106,
+        88,
+        76,
+        172,
+        167
+      ]
     }
   ],
   "errors": [
@@ -444,6 +665,11 @@ export type LendingProtocol = {
       "code": 6010,
       "name": "mathOverflow",
       "msg": "Math overflow occurred"
+    },
+    {
+      "code": 6011,
+      "name": "loanAlreadyExists",
+      "msg": "Borrower already has an active loan."
     }
   ],
   "types": [
@@ -518,6 +744,38 @@ export type LendingProtocol = {
           },
           {
             "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "obligation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "borrower",
+            "type": "pubkey"
+          },
+          {
+            "name": "collateralTokenMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "collateralAccount",
+            "type": "pubkey"
+          },
+          {
+            "name": "depositedAmount",
+            "type": "u64"
+          },
+          {
+            "name": "loanActive",
             "type": "bool"
           },
           {
