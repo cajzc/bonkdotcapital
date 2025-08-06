@@ -1,9 +1,10 @@
 global.Buffer = require('buffer').Buffer;
 
 import { Connection, PublicKey, Transaction, SystemProgram, SYSVAR_RENT_PUBKEY, SYSVAR_CLOCK_PUBKEY } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, ASSOCIATED_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
+import { TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token';
 import { Program } from '@coral-xyz/anchor';
-import { createLoanOfferPDA, createLoanPDA, createVaultPDA, createObligationPDA } from '../CreatePDAs';
+import { createLoanInfoPDA, createOpenLoanPDA, createVaultPDA, createCollateralVaultPDA } from '../CreatePDAs';
+import { BN } from '@coral-xyz/anchor';
 
 // Types for take loan operation
 export interface TakeLoanData {
@@ -12,7 +13,7 @@ export interface TakeLoanData {
   amount: string;
 }
 
-// Take loan operation (accept_loan instruction)
+// Take loan operation (take_loan instruction)
 export async function takeLoan(
   program: Program,
   connection: Connection,
@@ -45,20 +46,19 @@ export async function takeLoan(
 
   // Create PDAs using helpers
   console.log('Creating PDAs...');
-  const loanOfferPda = createLoanOfferPDA(lenderPublicKey, tokenMint, program.programId);
-  const loanPda = createLoanPDA(borrowerPublicKey, loanOfferPda, program.programId);
-  const vaultPda = createVaultPDA(loanOfferPda, program.programId);
-  const obligationPda = createObligationPDA(borrowerPublicKey, program.programId);
+  const loanInfoPda = createLoanInfoPDA(lenderPublicKey, tokenMint, program.programId);
+  const openLoanPda = createOpenLoanPDA(loanInfoPda, borrowerPublicKey, program.programId);
+  const vaultPda = createVaultPDA(loanInfoPda, program.programId);
+  const collateralVaultPda = createCollateralVaultPDA(loanInfoPda, borrowerPublicKey, program.programId);
 
-  console.log('Loan Offer PDA:', loanOfferPda.toString());
-  console.log('Loan PDA:', loanPda.toString());
+  console.log('Loan Info PDA:', loanInfoPda.toString());
+  console.log('Open Loan PDA:', openLoanPda.toString());
   console.log('Vault PDA:', vaultPda.toString());
-  console.log('Obligation PDA:', obligationPda.toString());
+  console.log('Collateral Vault PDA:', collateralVaultPda.toString());
 
   // Derive the Associated Token Account (ATA) for the borrower
   console.log('Deriving borrower ATA...');
   console.log('TOKEN_PROGRAM_ID:', TOKEN_PROGRAM_ID.toString());
-  console.log('ASSOCIATED_TOKEN_PROGRAM_ID:', ASSOCIATED_PROGRAM_ID.toString());
   
   const [borrowerTokenAccount] = PublicKey.findProgramAddressSync(
     [
@@ -66,26 +66,27 @@ export async function takeLoan(
       TOKEN_PROGRAM_ID.toBuffer(),
       tokenMint.toBuffer(),
     ],
-    ASSOCIATED_PROGRAM_ID
+    new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
   );
   console.log('Using borrower ATA:', borrowerTokenAccount.toString());
 
   // Create the instruction
   console.log('Creating instruction...');
   const instruction = await program.methods
-    .intializeAcceptLoan(
-      0 // bump 
+    .takeLoan(
+      new BN(parseFloat(takeLoanData.amount) * Math.pow(10, 6)) // amount
     )
     .accounts({
-      loanOffer: loanOfferPda,
-      loan: loanPda,
-      obligation: obligationPda,
+      openLoan: openLoanPda,
+      collateralVault: collateralVaultPda,
       borrowerTokenAccount: borrowerTokenAccount,
       vault: vaultPda,
+      loanInfo: loanInfoPda,
       borrower: borrowerPublicKey,
+      lender: lenderPublicKey,
       tokenMint: tokenMint,
       tokenProgram: TOKEN_PROGRAM_ID,
-      associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+      associatedTokenProgram: new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'),
       systemProgram: SystemProgram.programId,
       rent: SYSVAR_RENT_PUBKEY,
       clock: SYSVAR_CLOCK_PUBKEY,

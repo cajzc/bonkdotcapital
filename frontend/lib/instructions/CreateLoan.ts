@@ -115,7 +115,7 @@ export async function createLoanOffer(
       .createLoan(
         new BN(amount * Math.pow(10, 6)), // amount
         Math.round(interestRateBps * 100), // interest_rate_bps (convert percentage to basis points)
-        new BN(durationSeconds), // duration_seconds (convert days to seconds)
+        new BN(durationSeconds), // duration_slots (convert days to seconds)
         new BN(minScoreValue) // min_score
       )
       .accounts({
