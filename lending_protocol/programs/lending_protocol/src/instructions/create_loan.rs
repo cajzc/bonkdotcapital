@@ -1,6 +1,6 @@
 use crate::{
     errors::Errors,
-    state::{borrower_profile::BorrowerProfile, loan::{Loan, LoanInfo}, obligation::Obligation},
+    state::loan::LoanInfo
 };
 use anchor_lang::prelude::*;
 use anchor_spl::{
@@ -15,26 +15,26 @@ pub fn create_loan(
     interest_rate_bps: u16,
     duration_seconds: u64,
     min_score: u64,
-    bump: u8,
 ) -> Result<()> {
     require!(amount > 0, Errors::InvalidAmount);
     require!(interest_rate_bps > 0, Errors::InvalidInterestRate);
     require!(duration_seconds > 0, Errors::InvalidDuration);
     require!(min_score <= 1000, Errors::InvalidScore);
 
-    let loan_offer = &mut ctx.accounts.loan_info;
+    let loan_info= &mut ctx.accounts.loan_info;
     let lender = &ctx.accounts.lender;
 
     //Init loan offer account
-    loan_offer.lender = lender.key();
-    loan_offer.token_mint = ctx.accounts.token_mint.key();
-    loan_offer.amount = amount;
-    loan_offer.interest_rate_bps = interest_rate_bps;
-    loan_offer.duration_seconds = duration_seconds;
-    loan_offer.min_score = min_score;
-    loan_offer.vault = ctx.accounts.vault.key();
-    loan_offer.is_active = true;
-    loan_offer.bump = bump;
+    loan_info.lender = lender.key();
+    loan_info.loan_token_mint = ctx.accounts.loan_token_mint.key();
+    loan_info.accepted_token_mint = ctx.accounts.accepted_token_mint.key();
+    loan_info.amount = amount;
+    loan_info.interest_rate_bps = interest_rate_bps;
+    loan_info.duration_seconds = duration_seconds;
+    loan_info.min_score = min_score;
+    loan_info.vault = ctx.accounts.vault.key();
+    loan_info.is_active = true;
+    loan_info.bump = ctx.bumps.loan_info;
 
     //Transfer loan to vault
     let cpi_accounts = Transfer {
@@ -56,22 +56,22 @@ pub fn create_loan(
 }
 
 #[derive(Accounts)]
-#[instruction(amount: u64, interest_rate_bps: u16, duration_slots: u64, min_score: u64, bump: u8)]
+#[instruction(amount: u64, interest_rate_bps: u16, duration_slots: u64, min_score: u64)]
 pub struct CreateLoan<'info> {
     #[account(
         init,
         payer = lender,
         space = 8 + 32 + 32 + 8 + 2 + 8 + 8 + 32 + 1 + 1, 
-        seeds = [b"loan_offer", lender.key().as_ref(), token_mint.key().as_ref()],
+        seeds = [b"loan_info", lender.key().as_ref(), loan_token_mint.key().as_ref()],
         bump
     )]
-    /// Stores metadata about the loan
+    /// Stores metadata about the loan offer
     pub loan_info: Account<'info, LoanInfo>,
 
     #[account(
         init,
         payer = lender,
-        token::mint = token_mint,
+        token::mint = loan_token_mint,
         token::authority = loan_info, 
         seeds = [b"vault", loan_info.key().as_ref()],
         bump
@@ -84,11 +84,12 @@ pub struct CreateLoan<'info> {
 
     #[account(
        mut,
-       token::mint = token_mint,
+       token::mint = loan_token_mint,
        token::authority = lender
     )]
     pub lender_token_account: InterfaceAccount<'info, TokenAccount>,
-    pub token_mint: InterfaceAccount<'info, Mint>,
+    pub loan_token_mint: InterfaceAccount<'info, Mint>,
+    pub accepted_token_mint: InterfaceAccount<'info, Mint>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
