@@ -109,7 +109,7 @@ pub struct TakeLoan<'info> {
     #[account(
         init,
         payer = borrower,
-        space = 8 + 32 + 32 + 8 + 1 + 1,
+        space = 8 + 32 + 32 + 32 + 8 + 1 + 1,
         seeds = [b"collateral_vault", loan_info.key().as_ref(), borrower.key().as_ref()],
         bump,
         has_one = borrower
