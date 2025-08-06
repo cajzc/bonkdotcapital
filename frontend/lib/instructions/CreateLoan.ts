@@ -57,6 +57,16 @@ export async function createLoanOffer(
     throw new Error('Please enter a valid collateral amount');
   }
 
+  // Determine collateral token decimals based on selected token
+  let collateralDecimals: number;
+  if (selectedReceiveToken === 'SOL') {
+    collateralDecimals = 9; // SOL has 9 decimal places
+  } else if (selectedReceiveToken === 'BONK') {
+    collateralDecimals = 5; // BONK has 5 decimal places
+  } else {
+    throw new Error('Invalid selected receive token');
+  }
+
   // Find the token account for the selected token
   const tokenAccounts = await connection.getTokenAccountsByOwner(
     userPublicKey,
@@ -120,19 +130,19 @@ export async function createLoanOffer(
   try {
     console.log('About to call createLoan with parameters:');
     console.log('- loan_amount:', amount * Math.pow(10, 6));
-    console.log('- collateral_amount:', collateralAmountValue * Math.pow(10, 6));
+    console.log('- collateral_amount:', collateralAmountValue * Math.pow(10, collateralDecimals));
     console.log('- interest_rate_bps:', Math.round(interestRateBps * 100));
     console.log('- duration_slots:', durationSeconds);
     console.log('- min_score:', minScoreValue);
     
-    const tx = await program.methods
-      .createLoan(
-        new BN(amount * Math.pow(10, 6)), // loan_amount
-        new BN(collateralAmountValue * Math.pow(10, 6)), // FIXME: this assumes all tokens have the same decimals
-        Math.round(interestRateBps * 100), // interest_rate_bps (convert percentage to basis points)
-        new BN(durationSeconds), // duration_slots (convert days to seconds)
-        new BN(minScoreValue) // min_score
-      )
+          const tx = await program.methods
+        .createLoan(
+          new BN(amount * Math.pow(10, 6)), // loan_amount
+          new BN(collateralAmountValue * Math.pow(10, collateralDecimals)), // TODO: fetch decimals programmatically if we want to support more than SOL and BONK
+          Math.round(interestRateBps * 100), // interest_rate_bps (convert percentage to basis points)
+          new BN(durationSeconds), // duration_slots (convert days to seconds)
+          new BN(minScoreValue) // min_score
+        )
       .accounts({
         loanInfo: loanInfoPda,
         vault: vaultPda,
