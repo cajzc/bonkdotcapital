@@ -65,7 +65,7 @@ pub struct CreateLoan<'info> {
         seeds = [b"loan_info", lender.key().as_ref(), loan_token_mint.key().as_ref()],
         bump
     )]
-    /// Stores metadata about the loan offer
+    /// Stores metadata about the loan info
     pub loan_info: Account<'info, LoanInfo>,
 
     #[account(
