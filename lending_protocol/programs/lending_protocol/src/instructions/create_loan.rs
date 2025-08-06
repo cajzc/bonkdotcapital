@@ -11,12 +11,14 @@ use anchor_spl::{
 
 pub fn create_loan(
     ctx: Context<CreateLoan>,
-    amount: u64,
+    loan_amount: u64,
+    collateral_amount: u64,
     interest_rate_bps: u16,
     duration_seconds: u64,
     min_score: u64,
 ) -> Result<()> {
-    require!(amount > 0, Errors::InvalidAmount);
+    require!(loan_amount > 0, Errors::InvalidLoanAmount);
+    require!(collateral_amount > 0, Errors::InvalidCollateralAmount);
     require!(interest_rate_bps > 0, Errors::InvalidInterestRate);
     require!(duration_seconds > 0, Errors::InvalidDuration);
     require!(min_score <= 1000, Errors::InvalidScore);
@@ -27,13 +29,14 @@ pub fn create_loan(
     //Init loan offer account
     loan_info.lender = lender.key();
     loan_info.loan_token_mint = ctx.accounts.loan_token_mint.key();
-    loan_info.accepted_token_mint = ctx.accounts.accepted_token_mint.key();
-    loan_info.amount = amount;
+    loan_info.collateral_token_mint = ctx.accounts.accepted_token_mint.key();
+    loan_info.loan_amount= loan_amount;
+    loan_info.collateral_amount = collateral_amount;
     loan_info.interest_rate_bps = interest_rate_bps;
     loan_info.duration_seconds = duration_seconds;
     loan_info.min_score = min_score;
     loan_info.vault = ctx.accounts.vault.key();
-    loan_info.is_active = true;
+    loan_info.is_active = false;
     loan_info.bump = ctx.bumps.loan_info;
 
     //Transfer loan to vault
@@ -44,11 +47,11 @@ pub fn create_loan(
     };
     let cpi_program = ctx.accounts.token_program.to_account_info();
     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-    anchor_spl::token::transfer(cpi_ctx, amount)?;
+    anchor_spl::token::transfer(cpi_ctx, loan_amount)?;
 
     msg!(
         "Loan offer created with amount: {} and interest rate: {} bps",
-        amount,
+        loan_amount,
         interest_rate_bps
     );
 
@@ -61,7 +64,7 @@ pub struct CreateLoan<'info> {
     #[account(
         init,
         payer = lender,
-        space = 8 + 32 + 32 + 32 + 8 + 2 + 8 + 8 + 32 + 1 + 1,
+        space = 8 + 32 + 32 + 32 + 8 + 8 + 2 + 8 + 8 + 32 + 1 + 1,
         seeds = [b"loan_info", lender.key().as_ref(), loan_token_mint.key().as_ref()],
         bump
     )]

@@ -21,14 +21,16 @@ pub mod lending_protocol {
 
     pub fn create_loan(
         ctx: Context<CreateLoan>,
-        amount: u64,
+        loan_amount: u64,
+        collateral_amount: u64,
         interest_rate_bps: u16,
         duration_slots: u64,
         min_score: u64,
     ) -> Result<()> {
         instructions::create_loan(
             ctx,
-            amount,
+            loan_amount,
+            collateral_amount,
             interest_rate_bps,
             duration_slots,
             min_score,
