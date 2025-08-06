@@ -6,16 +6,68 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, CommonStyles } from '../../constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSolanaProgram } from '../../lib/Solana';
+import { useAuthorization } from '../../lib/AuthorizationProvider';
+import { RPC_ENDPOINT } from '@/constants/RpcConnection';
+import { payLoan, PayLoanData } from '../../lib/instructions/PayLoan';
+import { Connection, PublicKey } from '@solana/web3.js';
 
 type TabType = 'loans' | 'requests' | 'messages';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { selectedAccount } = useAuthorization();
+  const { program, wallet } = useSolanaProgram();
   const [activeTab, setActiveTab] = useState<TabType>('loans');
+  const [isRepaying, setIsRepaying] = useState(false);
+
+  // Create connection once, not on every render
+  const connection = React.useMemo(() => new Connection(RPC_ENDPOINT), []);
+
+  const handleRepayLoan = async () => {
+    if (!program || !connection || !wallet) {
+      Alert.alert('Error', 'Solana program not available. Please try again.');
+      return;
+    }
+
+    const userPublicKey = selectedAccount?.publicKey;
+    if (!userPublicKey) {
+      Alert.alert('Error', 'Wallet not connected');
+      return;
+    }
+
+    setIsRepaying(true);
+    try {
+      // TODO: Hardcoded loan data for now
+      const payLoanData: PayLoanData = {
+        tokenMint: 'So11111111111111111111111111111111111111112', 
+        lenderPublicKey: '', 
+        borrowerPublicKey: userPublicKey.toString(),
+      };
+
+      const signature = await payLoan(
+        program,
+        connection,
+        wallet,
+        userPublicKey,
+        payLoanData
+      );
+      
+      console.log('Pay loan transaction signature:', signature);
+      Alert.alert('Success', 'Loan repaid successfully!');
+
+    } catch (error: any) {
+      console.error('Error repaying loan:', error);
+      Alert.alert('Error', `Failed to repay loan: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsRepaying(false);
+    }
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -57,6 +109,16 @@ export default function ProfileScreen() {
               </View>
               <Text style={styles.progressText}>60% complete</Text>
             </View>
+
+            <TouchableOpacity 
+              style={[styles.repayButton, isRepaying && styles.repayButtonDisabled]} 
+              onPress={handleRepayLoan}
+              disabled={isRepaying}
+            >
+              <Text style={styles.repayButtonText}>
+                {isRepaying ? 'Repaying...' : 'Repay Loan'}
+              </Text>
+            </TouchableOpacity>
           </View>
         );
       case 'requests':
@@ -320,5 +382,21 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     color: Colors.textTertiary,
     textAlign: 'center',
+  },
+  repayButton: {
+    backgroundColor: Colors.success,
+    borderRadius: BorderRadius.xl,
+    paddingVertical: Spacing.lg,
+    alignItems: 'center',
+    marginTop: Spacing.xl,
+    ...Shadows.lg,
+  },
+  repayButtonText: {
+    color: Colors.textLight,
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.semibold,
+  },
+  repayButtonDisabled: {
+    opacity: 0.6,
   },
 });
