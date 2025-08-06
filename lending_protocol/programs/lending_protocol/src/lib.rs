@@ -8,16 +8,18 @@ pub mod state;
 
 use instructions::*;
 
+
 #[program]
 pub mod lending_protocol {
     use super::*;
 
+    /// Testing purposes
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Lending protocol initialized: {:?}", ctx.program_id);
+        msg!("Testing lending protocol: {:?}", ctx.program_id);
         Ok(())
     }
 
-    pub fn initialize_create_loan(
+    pub fn create_loan(
         ctx: Context<CreateLoan>,
         amount: u64,
         interest_rate_bps: u16,
@@ -25,7 +27,7 @@ pub mod lending_protocol {
         min_score: u64,
         bump: u8,
     ) -> Result<()> {
-        create_loan(
+        instructions::create_loan(
             ctx,
             amount,
             interest_rate_bps,
@@ -35,20 +37,14 @@ pub mod lending_protocol {
         )
     }
 
-    pub fn initialize_obligation(
-        ctx: Context<DepositCollateral>,
-        amount: u64,
-        bump: u8,
-    ) -> Result<()> {
-        deposit_collateral(ctx, amount, bump)
-    }
+    pub fn take_loan(ctx: Context<TakeLoan>, amount: u64) -> Result<()> {
+        instructions::take_loan(ctx, amount)?;
 
-    pub fn intialize_accept_loan(ctx: Context<AcceptLoan>, bump: u8) -> Result<()> {
-        accept_loan(ctx, bump)
+        Ok(())
     }
 
     pub fn initialize_pay_loan(ctx: Context<PayLoan>) -> Result<()> {
-        pay_loan(ctx)
+        instructions::pay_loan(ctx)
     }
 }
 

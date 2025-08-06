@@ -1,5 +1,7 @@
-pub mod loan;
-pub mod obligation;
+pub mod create_loan;
+pub mod take_loan;
+pub mod pay_loan;
 
-pub use loan::*;
-pub use obligation::*;
+pub use create_loan::*;
+pub use take_loan::*;
+pub use pay_loan::*;

@@ -12,7 +12,7 @@ pub struct Loan {
 }
 
 #[account]
-pub struct LoanOffer {
+pub struct LoanInfo{
     pub lender: Pubkey,         // Lender’s public key
     pub token_mint: Pubkey,     // Token type (e.g., USDC mint)
     pub amount: u64,            // Loan amount

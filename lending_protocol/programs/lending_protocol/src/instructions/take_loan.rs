@@ -1,6 +1,6 @@
 use crate::{
     errors::Errors,
-    state::{borrower_profile::BorrowerProfile, loan::{Loan, LoanOffer}, obligation::Obligation},
+    state::{borrower_profile::BorrowerProfile, loan::{Loan, LoanInfo}, obligation::Obligation},
 };
 use anchor_lang::prelude::*;
 use anchor_spl::{
@@ -9,89 +9,35 @@ use anchor_spl::{
     associated_token::AssociatedToken
 };
 
-pub fn create_loan(
-    ctx: Context<CreateLoan>,
-    amount: u64,
-    interest_rate_bps: u16,
-    duration_seconds: u64,
-    min_score: u64,
-    bump: u8,
-) -> Result<()> {
-    //validate inputs
+
+pub fn take_loan(ctx: Context<TakeLoan>, amount: u64) -> Result<()> {
     require!(amount > 0, Errors::InvalidAmount);
-    require!(interest_rate_bps > 0, Errors::InvalidInterestRate);
-    require!(duration_seconds > 0, Errors::InvalidDuration);
-    require!(min_score <= 1000, Errors::InvalidScore);
 
-    let loan_offer = &mut ctx.accounts.loan_offer;
-    let lender = &ctx.accounts.lender;
+    let collateral = &mut ctx.accounts.collateral;
+    collateral.borrower = ctx.accounts.borrower.key();
+    collateral.collateral_token_mint = ctx.accounts.token_mint.key();
+    collateral.collateral_account = ctx.accounts.collateral_vault.key();
+    collateral.bump = ctx.bumps.collateral;
+    collateral.deposited_amount = collateral
+        .deposited_amount
+        .checked_add(amount)
+        .ok_or(Errors::MathOverflow)?;
 
-    //Init loan offer account
-    loan_offer.lender = lender.key();
-    loan_offer.token_mint = ctx.accounts.token_mint.key();
-    loan_offer.amount = amount;
-    loan_offer.interest_rate_bps = interest_rate_bps;
-    loan_offer.duration_seconds = duration_seconds;
-    loan_offer.min_score = min_score;
-    loan_offer.vault = ctx.accounts.vault.key();
-    loan_offer.is_active = true;
-    loan_offer.bump = bump;
-
-    //Transfer loan to vault
     let cpi_accounts = Transfer {
-        from: ctx.accounts.lender_token_account.to_account_info(),
-        to: ctx.accounts.vault.to_account_info(),
-        authority: lender.to_account_info(),
+        from: ctx.accounts.borrower_token_account.to_account_info(),
+        to: ctx.accounts.collateral_vault.to_account_info(),
+        authority: ctx.accounts.borrower.to_account_info(),
     };
-    let cpi_program = ctx.accounts.token_program.to_account_info();
-    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-    anchor_spl::token::transfer(cpi_ctx, amount)?;
+    let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
+    token::transfer(cpi_ctx, amount)?;
 
     msg!(
-        "Loan offer created with amount: {} and interest rate: {} bps",
-        amount,
-        interest_rate_bps
+        "Borrower {} deposited {} collateral",
+        collateral.borrower,
+        amount
     );
-
-    Ok(())
-}
-
-#[derive(Accounts)]
-#[instruction(amount: u64, interest_rate_bps: u16, duration_slots: u64, min_score: u64, bump: u8)]
-pub struct CreateLoan<'info> {
-    #[account(
-        init,
-        payer = lender,
-        space = 8 + 32 + 32 + 8 + 2 + 8 + 8 + 32 + 1 + 1, 
-        seeds = [b"loan_offer", lender.key().as_ref(), token_mint.key().as_ref()],
-        bump
-    )]
-    pub loan_offer: Account<'info, LoanOffer>,
-    #[account(
-        init,
-        payer = lender,
-        token::mint = token_mint,
-        token::authority = loan_offer, 
-        seeds = [b"vault", loan_offer.key().as_ref()],
-        bump
-    )]
-    pub vault: InterfaceAccount<'info, TokenAccount>,
-    #[account(mut)]
-    pub lender: Signer<'info>,
-    #[account(
-       mut,
-       token::mint = token_mint,
-       token::authority = lender
-    )]
-    pub lender_token_account: InterfaceAccount<'info, TokenAccount>,
-    pub token_mint: InterfaceAccount<'info, Mint>,
-    pub token_program: Interface<'info, TokenInterface>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
-}
-
-
-pub fn accept_loan(ctx: Context<AcceptLoan>, bump: u8) -> Result<()> {
+    
+    
     let loan_offer = &mut ctx.accounts.loan_offer;
     let loan = &mut ctx.accounts.loan;
     let clock = Clock::get()?;
@@ -117,7 +63,7 @@ pub fn accept_loan(ctx: Context<AcceptLoan>, bump: u8) -> Result<()> {
     loan.start_time = clock.unix_timestamp;
     loan.repay_by_time = clock.unix_timestamp + loan_offer.duration_seconds as i64;
     loan.is_repaid = false;
-    loan.bump = bump;
+    loan.bump = ctx.bumps.loan;
 
     // Transfer loan amount from vault to borrower
     let seeds = &[
@@ -151,7 +97,7 @@ pub fn accept_loan(ctx: Context<AcceptLoan>, bump: u8) -> Result<()> {
 
 #[derive(Accounts)]
 #[instruction(bump: u8)]
-pub struct AcceptLoan<'info> {
+pub struct TakeLoan<'info> {
     #[account(
         mut,
         seeds = [b"loan_offer", loan_offer.lender.as_ref(), token_mint.key().as_ref()],
@@ -175,7 +121,7 @@ pub struct AcceptLoan<'info> {
         seeds = [b"obligation", borrower.key().as_ref()],
         bump = obligation.bump,
         has_one = borrower
-        )]
+    )]
     pub obligation: Account<'info, Obligation>,
 
     #[account(
@@ -251,9 +197,9 @@ pub fn pay_loan(ctx:Context<PayLoan>) -> Result<()>{
 
     if amount_to_return > 0 {
         let seeds = &[
-          b"obligation",
-          ctx.accounts.borrower.key.as_ref(),
-         &[obligation.bump],
+            b"obligation",
+            ctx.accounts.borrower.key.as_ref(),
+            &[obligation.bump],
         ];
 
         let signer = &[&seeds[..]];
@@ -263,14 +209,14 @@ pub fn pay_loan(ctx:Context<PayLoan>) -> Result<()>{
             to: ctx.accounts.borrower_token_account.to_account_info(),
             authority: obligation.to_account_info(),
         };
-       let cpi_program = ctx.accounts.token_program.to_account_info();
-       let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
 
-       anchor_spl::token::transfer(cpi_ctx, amount_to_return)?;
-      msg!("Returned {} collateral to borrower", amount_to_return); 
+        anchor_spl::token::transfer(cpi_ctx, amount_to_return)?;
+        msg!("Returned {} collateral to borrower", amount_to_return);
     }
 
-     msg!(
+    msg!(
         "Loan repaid: Borrower {} paid {} (principal: {}, interest: {}) to lender {}",
         ctx.accounts.borrower.key(),
         total_amount,
@@ -339,3 +285,50 @@ pub struct PayLoan<'info>{
     pub clock: Sysvar<'info, Clock>,
 }
 
+use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+
+use crate::errors::Errors;
+use crate::instructions::{AcceptLoan, TakeLoan};
+use crate::state::obligation::Obligation;
+
+pub fn deposit_collateral(ctx: Context<TakeLoan>, amount: u64) -> Result<()> {
+    
+
+    Ok(())
+}
+
+#[derive(Accounts)]
+#[instruction(amount: u64, bump: u8)]
+pub struct DepositCollateral<'info> {
+    #[account(
+     init_if_needed,
+     payer = borrower,
+     space = 8 + 32 + 32 + 32 + 8 + 1 + 1,
+     seeds = [b"obligation", borrower.key().as_ref()],
+     bump
+    )]
+    pub obligation: Account<'info, Obligation>,
+    #[account(
+     mut,
+     token::mint = token_mint,
+     token::authority = borrower
+    )]
+    pub borrower_token_account: Account<'info, TokenAccount>,
+    #[account(
+     init_if_needed,
+     payer = borrower,
+     token::mint = token_mint,
+     token::authority = obligation,
+     seeds = [b"collateral_vault", borrower.key().as_ref(), token_mint.key().as_ref()],
+     bump
+    )]
+    pub collateral_vault: Account<'info, TokenAccount>,
+
+    pub token_mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub borrower: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
