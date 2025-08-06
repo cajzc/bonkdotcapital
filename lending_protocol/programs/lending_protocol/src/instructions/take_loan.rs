@@ -100,11 +100,13 @@ pub fn take_loan(ctx: Context<TakeLoan>) -> Result<()> {
     );
 
     // Transfer loan amount from vault to borrower
-    let loan_info = ctx.accounts.loan_info.key();
+    let lender = ctx.accounts.lender.key();
+    let token_mint = ctx.accounts.token_mint.key();
     let seeds = &[
-        b"vault",
-        loan_info.as_ref(),
-        &[ctx.bumps.loan_info],
+        b"loan_info",
+        lender.as_ref(),
+        token_mint.as_ref(),
+        &[ctx.bumps.loan_info]
     ];
     let signer = &[&seeds[..]];
     let cpi_accounts = Transfer {
