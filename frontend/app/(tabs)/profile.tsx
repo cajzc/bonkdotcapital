@@ -45,7 +45,7 @@ export default function ProfileScreen() {
     try {
       // TODO: Hardcoded loan data for now - borrowing BONK with SOL collateral
       const payLoanData: PayLoanData = {
-        tokenMint: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', // BONK mint (what you borrowed)
+        borrowedTokenMint: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', // BONK mint (what you borrowed)
         collateralTokenMint: 'So11111111111111111111111111111111111111112', // SOL mint (what you used as collateral)
         lenderPublicKey: 'DY1Q6eLWtAuVZJtRVC64ZhCeBqwxwvVpWUwDJQQjSv55', 
       };

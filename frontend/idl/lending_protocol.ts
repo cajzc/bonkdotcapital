@@ -226,7 +226,7 @@ export type LendingProtocol = {
               },
               {
                 "kind": "account",
-                "path": "tokenMint"
+                "path": "loanTokenMint"
               }
             ]
           }
@@ -272,8 +272,181 @@ export type LendingProtocol = {
           }
         },
         {
-          "name": "borrowerTokenAccount",
-          "writable": true
+          "name": "collateralVaultTokenAccount",
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "collateralVault"
+              },
+              {
+                "kind": "account",
+                "path": "tokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "loanTokenMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "borrowerCollateralTokenAccount",
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "borrower"
+              },
+              {
+                "kind": "account",
+                "path": "tokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "loanTokenMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "borrowerRepayTokenAccount",
+          "docs": [
+            "Holds the tokens that the borrower repays"
+          ],
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "borrower"
+              },
+              {
+                "kind": "account",
+                "path": "tokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "loanTokenMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
         },
         {
           "name": "lenderTokenAccount",
@@ -288,10 +461,18 @@ export type LendingProtocol = {
           "name": "lender"
         },
         {
-          "name": "tokenMint"
+          "name": "loanTokenMint"
         },
         {
           "name": "tokenProgram"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         }
       ],
       "args": []
@@ -506,7 +687,10 @@ export type LendingProtocol = {
           "name": "lender"
         },
         {
-          "name": "tokenMint"
+          "name": "tokenMint",
+          "docs": [
+            "Token being lent"
+          ]
         },
         {
           "name": "tokenProgram"
@@ -647,6 +831,21 @@ export type LendingProtocol = {
       "code": 6014,
       "name": "loanAlreadyExists",
       "msg": "Borrower already has an active loan."
+    },
+    {
+      "code": 6015,
+      "name": "missingCollateralVaultTokenAccount",
+      "msg": "Missing collateral vault token account."
+    },
+    {
+      "code": 6016,
+      "name": "missingBorrowerTokenAccount",
+      "msg": "Missing borrower token account."
+    },
+    {
+      "code": 6017,
+      "name": "missingBorrowerRepayTokenAccount",
+      "msg": "Missing borrower repay token account."
     }
   ],
   "types": [
