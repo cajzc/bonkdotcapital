@@ -19,6 +19,7 @@ import { PublicKey } from '@solana/web3.js';
 import { useSolanaProgram } from '../../lib/Solana';
 import { useAuthorization } from '../../lib/AuthorizationProvider';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { BN } from '@coral-xyz/anchor';
 
 
 interface DropdownProps {
@@ -71,23 +72,33 @@ export default function BorrowScreen() {
       // In a real app, you'd get these from the selected loan offer
       const tokenMint = new PublicKey('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'); // BONK token mint
       const lenderPublicKey = new PublicKey('11111111111111111111111111111111'); // Placeholder lender
-      const bump = 0; // Will be calculated by the program
+      const amount = parseFloat(bonkAmount) * Math.pow(10, 6); // Convert to lamports
 
-      // Find PDA for loan offer (you'd get this from the selected offer)
-      const [loanOfferPda] = PublicKey.findProgramAddressSync(
+      // Find PDA for loan info (you'd get this from the selected offer)
+      const [loanInfoPda] = PublicKey.findProgramAddressSync(
         [
-          Buffer.from('loan_offer'),
+          Buffer.from('loan_info'),
           lenderPublicKey.toBuffer(),
           tokenMint.toBuffer(),
         ],
         program.programId
       );
 
-      // Find PDA for loan
-      const [loanPda] = PublicKey.findProgramAddressSync(
+      // Find PDA for open loan
+      const [openLoanPda] = PublicKey.findProgramAddressSync(
         [
-          Buffer.from('loan'),
-          loanOfferPda.toBuffer(),
+          Buffer.from('open_loan'),
+          loanInfoPda.toBuffer(),
+          selectedAccount.publicKey.toBuffer(),
+        ],
+        program.programId
+      );
+
+      // Find PDA for collateral vault
+      const [collateralVaultPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('collateral_vault'),
+          loanInfoPda.toBuffer(),
           selectedAccount.publicKey.toBuffer(),
         ],
         program.programId
@@ -97,7 +108,7 @@ export default function BorrowScreen() {
       const [vaultPda] = PublicKey.findProgramAddressSync(
         [
           Buffer.from('vault'),
-          loanOfferPda.toBuffer(),
+          loanInfoPda.toBuffer(),
         ],
         program.programId
       );
@@ -111,15 +122,18 @@ export default function BorrowScreen() {
       console.log('Borrower token account:', borrowerTokenAccount.toString());
 
       const txSignature = await program.methods
-        .intializeAcceptLoan(bump)
+        .takeLoan(new BN(amount))
         .accounts({
-          loanOffer: loanOfferPda,
-          loan: loanPda,
+          openLoan: openLoanPda,
+          collateralVault: collateralVaultPda,
           borrowerTokenAccount: borrowerTokenAccount, 
           vault: vaultPda,
+          loanInfo: loanInfoPda,
           borrower: selectedAccount.publicKey,
+          lender: lenderPublicKey,
           tokenMint: tokenMint,
           tokenProgram: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+          associatedTokenProgram: new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'),
           systemProgram: new PublicKey('11111111111111111111111111111111'),
           rent: new PublicKey('SysvarRent111111111111111111111111111111111'),
           clock: new PublicKey('SysvarC1ock11111111111111111111111111111111'),

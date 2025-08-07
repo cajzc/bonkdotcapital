@@ -27,6 +27,9 @@ func SetupRoutes(router *gin.Engine, app *handlers.AppContext) {
 			// route for getting details of specific loan offer
 			offers.GET("/:offerId", app.GetOfferByIDHandler)
 			
+			// route for accepting a loan offer
+			offers.POST("/:offerId/accept", app.AcceptLoanOfferHandler)
+			
 			// route for creating comment on specific loan offer
 			offers.POST("/:offerId/comments", app.CreateCommentHandler)
 
@@ -53,8 +56,23 @@ func SetupRoutes(router *gin.Engine, app *handlers.AppContext) {
 		// Routes for user-specific data
 		users := api.Group("/users")
 		{
-			// route for getting user's active loans
-			users.GET("/:userAddress/loans", app.GetUserActiveLoansHandler)
+			// route for creating/getting user
+			users.POST("/:userAddress", app.CreateUserHandler)
+			
+			// route for getting user details
+			users.GET("/:userAddress", app.GetUserHandler)
+			
+			// route for updating user information
+			users.PATCH("/:userAddress", app.UpdateUserHandler)
+			
+			// route for getting comprehensive user profile
+			users.GET("/:userAddress/profile", app.GetUserProfileHandler)
+
+			// route for getting all user loans (active and completed)
+			users.GET("/:userAddress/loans", app.GetUserLoansHandler)
+			
+			// route for getting user's offers
+			users.GET("/:userAddress/offers", app.GetUserOffersHandler)
 
 			// route for getting user's active loan requests
 			users.GET("/:userAddress/requests", app.GetUserActiveRequestsHandler)

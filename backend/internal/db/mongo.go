@@ -16,6 +16,7 @@ var (
     commentsCollection   *mongo.Collection
     loansCollection      *mongo.Collection
     requestsCollection   *mongo.Collection
+    usersCollection      *mongo.Collection
 )
 
 // InitCollections initializes the collection handles.
@@ -24,6 +25,7 @@ func InitCollections(db *mongo.Database) {
     commentsCollection = db.Collection("comments")
     loansCollection = db.Collection("loans")
     requestsCollection = db.Collection("requests")
+    usersCollection = db.Collection("users")
     log.Println("Database collections initialized.")
 }
 
@@ -321,4 +323,355 @@ func GetPlatformStats() (*models.PlatformStats, error) {
 	}
 	
 	return stats, nil
+}
+
+// User-related database functions
+
+// GetOrCreateUser retrieves an existing user or creates a new one
+func GetOrCreateUser(walletAddress string, username *string, email *string) (*models.User, error) {
+	// Try to find existing user
+	var existingUser models.User
+	err := usersCollection.FindOne(context.TODO(), bson.M{"wallet_address": walletAddress}).Decode(&existingUser)
+	
+	if err == nil {
+		// User exists, update last active
+		now := time.Now()
+		existingUser.LastActive = now
+		existingUser.UpdatedAt = now
+		
+		_, updateErr := usersCollection.UpdateOne(
+			context.TODO(),
+			bson.M{"wallet_address": walletAddress},
+			bson.M{"$set": bson.M{
+				"last_active": now,
+				"updated_at": now,
+			}},
+		)
+		if updateErr != nil {
+			log.Printf("Error updating user last active: %v", updateErr)
+		}
+		
+		return &existingUser, nil
+	}
+	
+	if err != mongo.ErrNoDocuments {
+		return nil, err
+	}
+	
+	// Create new user
+	now := time.Now()
+	newUser := &models.User{
+		ID:                     primitive.NewObjectID(),
+		WalletAddress:          walletAddress,
+		Username:               username,
+		Email:                  email,
+		CreditScore:            0,
+		TotalLoansAsLender:     0,
+		TotalLoansAsBorrower:   0,
+		TotalVolumeLent:        0,
+		TotalVolumeBorrowed:    0,
+		DefaultCount:           0,
+		SuccessfulLoansCount:   0,
+		JoinDate:               now,
+		LastActive:             now,
+		IsActive:               true,
+		CreatedAt:              now,
+		UpdatedAt:              now,
+	}
+	
+	_, err = usersCollection.InsertOne(context.TODO(), newUser)
+	if err != nil {
+		return nil, err
+	}
+	
+	return newUser, nil
+}
+
+// GetUserByAddress retrieves a user by wallet address
+func GetUserByAddress(walletAddress string) (*models.User, error) {
+	var user models.User
+	err := usersCollection.FindOne(context.TODO(), bson.M{"wallet_address": walletAddress}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// UpdateUser updates user information
+func UpdateUser(walletAddress string, updates map[string]interface{}) (*models.User, error) {
+	updates["updated_at"] = time.Now()
+	
+	_, err := usersCollection.UpdateOne(
+		context.TODO(),
+		bson.M{"wallet_address": walletAddress},
+		bson.M{"$set": updates},
+	)
+	if err != nil {
+		return nil, err
+	}
+	
+	return GetUserByAddress(walletAddress)
+}
+
+// GetUserLoans retrieves all loans for a user (as lender or borrower)
+func GetUserLoans(userAddress string) ([]models.Loan, error) {
+	var loans []models.Loan
+	filter := bson.M{
+		"$or": []bson.M{
+			{"lender_address": userAddress},
+			{"borrower_address": userAddress},
+		},
+	}
+	
+	cursor, err := loansCollection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	if err = cursor.All(context.TODO(), &loans); err != nil {
+		return nil, err
+	}
+	return loans, nil
+}
+
+// GetUserOffers retrieves all offers created by a user
+func GetUserOffers(userAddress string) ([]models.LoanOffer, error) {
+	var offers []models.LoanOffer
+	filter := bson.M{"lender_address": userAddress}
+	
+	cursor, err := offersCollection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	if err = cursor.All(context.TODO(), &offers); err != nil {
+		return nil, err
+	}
+	return offers, nil
+}
+
+// GetUserProfile retrieves comprehensive user profile with all related data
+func GetUserProfile(userAddress string) (*models.UserProfile, error) {
+	// Get user
+	user, err := GetUserByAddress(userAddress)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Get all loans for user
+	loans, err := GetUserLoans(userAddress)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Get user offers
+	offers, err := GetUserOffers(userAddress)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Get user requests
+	requests, err := GetUserActiveRequests(userAddress)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Categorize loans
+	var activeLoansAsBorrower []models.Loan
+	var activeLoansAsLender []models.Loan
+	var completedLoansAsBorrower []models.Loan
+	var completedLoansAsLender []models.Loan
+	
+	for _, loan := range loans {
+		if loan.BorrowerAddress == userAddress {
+			if loan.IsActive {
+				activeLoansAsBorrower = append(activeLoansAsBorrower, loan)
+			} else {
+				completedLoansAsBorrower = append(completedLoansAsBorrower, loan)
+			}
+		}
+		if loan.LenderAddress == userAddress {
+			if loan.IsActive {
+				activeLoansAsLender = append(activeLoansAsLender, loan)
+			} else {
+				completedLoansAsLender = append(completedLoansAsLender, loan)
+			}
+		}
+	}
+	
+	// Filter active offers
+	var activeOffers []models.LoanOffer
+	for _, offer := range offers {
+		if offer.IsActive != nil && *offer.IsActive {
+			activeOffers = append(activeOffers, offer)
+		}
+	}
+	
+	// Calculate stats
+	totalVolume := 0.0
+	totalAPY := 0.0
+	apyCount := 0
+	completedLoansCount := int32(len(completedLoansAsBorrower) + len(completedLoansAsLender))
+	
+	for _, loan := range loans {
+		if !loan.IsActive {
+			totalVolume += loan.Amount
+			totalAPY += loan.APY
+			apyCount++
+		}
+	}
+	
+	averageAPY := 0.0
+	if apyCount > 0 {
+		averageAPY = totalAPY / float64(apyCount)
+	}
+	
+	successRate := 100.0
+	if user.TotalLoansAsLender > 0 || user.TotalLoansAsBorrower > 0 {
+		totalLoans := user.TotalLoansAsLender + user.TotalLoansAsBorrower
+		if totalLoans > 0 {
+			successRate = (float64(user.SuccessfulLoansCount) / float64(totalLoans)) * 100
+		}
+	}
+	
+	stats := models.UserStats{
+		LoansCompleted: completedLoansCount,
+		TotalVolume:    totalVolume,
+		AverageAPY:     averageAPY,
+		SuccessRate:    successRate,
+	}
+	
+	profile := &models.UserProfile{
+		User:                        *user,
+		ActiveLoansAsBorrower:       activeLoansAsBorrower,
+		ActiveLoansAsLender:         activeLoansAsLender,
+		CompletedLoansAsBorrower:    completedLoansAsBorrower,
+		CompletedLoansAsLender:      completedLoansAsLender,
+		ActiveOffers:                activeOffers,
+		ActiveRequests:              requests,
+		TotalStats:                  stats,
+	}
+	
+	return profile, nil
+}
+
+// AcceptLoanOffer creates a loan record and updates the offer status
+func AcceptLoanOffer(offerID string, acceptanceData *struct {
+	BorrowerAddress     string `json:"borrower_address"`
+	TransactionSignature string `json:"transaction_signature"`
+	OpenLoanPDA         string `json:"open_loan_pda"`
+	CollateralVaultPDA  string `json:"collateral_vault_pda"`
+	StartDate           string `json:"start_date,omitempty"`
+	EndDate             string `json:"end_date,omitempty"`
+}) (*models.Loan, error) {
+	
+	// Get the original offer
+	offer, err := GetOfferByID(offerID)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Parse dates and calculate proper end date based on offer duration
+	var startDate, endDate time.Time
+	if acceptanceData.StartDate != "" {
+		startDate, _ = time.Parse(time.RFC3339, acceptanceData.StartDate)
+	} else {
+		startDate = time.Now()
+	}
+	if acceptanceData.EndDate != "" {
+		endDate, _ = time.Parse(time.RFC3339, acceptanceData.EndDate)
+	} else {
+		// Use the actual duration from the offer
+		durationSeconds := *offer.Duration
+		// If duration seems to be in days (< 365), convert to seconds
+		if durationSeconds < 365 {
+			durationSeconds = durationSeconds * 24 * 60 * 60
+		}
+		endDate = startDate.Add(time.Duration(durationSeconds) * time.Second)
+	}
+	
+	// Create loan record
+	loan := &models.Loan{
+		ID:               primitive.NewObjectID(),
+		LoanAddress:      acceptanceData.OpenLoanPDA,
+		LenderAddress:    *offer.LenderAddress,
+		BorrowerAddress:  acceptanceData.BorrowerAddress,
+		Amount:           *offer.Amount,
+		APY:              *offer.APY,
+		Token:            *offer.Token,
+		CollateralToken:  *offer.CollateralName,
+		CollateralAmount: *offer.CollateralAmount,
+		Duration:         *offer.Duration,
+		StartDate:        startDate,
+		EndDate:          endDate,
+		IsActive:         true,
+		CreatedAt:        time.Now(),
+	}
+	
+	// Insert loan
+	_, err = loansCollection.InsertOne(context.TODO(), loan)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Update offer to inactive
+	offerObjID, _ := primitive.ObjectIDFromHex(offerID)
+	inactive := false
+	_, err = offersCollection.UpdateOne(
+		context.TODO(),
+		bson.M{"_id": offerObjID},
+		bson.M{"$set": bson.M{"is_active": &inactive}},
+	)
+	if err != nil {
+		log.Printf("Error updating offer status: %v", err)
+	}
+	
+	// Update user statistics for both lender and borrower
+	go func() {
+		// Update lender stats
+		lenderUpdates := map[string]interface{}{
+			"$inc": bson.M{
+				"total_loans_as_lender": 1,
+				"total_volume_lent":     *offer.Amount,
+			},
+			"$set": bson.M{
+				"last_active": time.Now(),
+				"updated_at":  time.Now(),
+			},
+		}
+		_, lenderErr := usersCollection.UpdateOne(
+			context.TODO(),
+			bson.M{"wallet_address": *offer.LenderAddress},
+			lenderUpdates,
+		)
+		if lenderErr != nil {
+			log.Printf("Error updating lender stats: %v", lenderErr)
+		}
+		
+		// Update borrower stats
+		borrowerUpdates := map[string]interface{}{
+			"$inc": bson.M{
+				"total_loans_as_borrower": 1,
+				"total_volume_borrowed":   *offer.Amount,
+			},
+			"$set": bson.M{
+				"last_active": time.Now(),
+				"updated_at":  time.Now(),
+			},
+		}
+		_, borrowerErr := usersCollection.UpdateOne(
+			context.TODO(),
+			bson.M{"wallet_address": acceptanceData.BorrowerAddress},
+			borrowerUpdates,
+		)
+		if borrowerErr != nil {
+			log.Printf("Error updating borrower stats: %v", borrowerErr)
+		}
+		
+		log.Printf("Updated user statistics for loan %s", loan.ID.Hex())
+	}()
+	
+	return loan, nil
 }

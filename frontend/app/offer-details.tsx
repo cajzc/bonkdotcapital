@@ -19,6 +19,9 @@ import { useAuthorization } from '../lib/AuthorizationProvider';
 import { apiClient } from '../lib/apiClient';
 import { wsClient } from '../lib/websocketClient';
 import type { LoanOffer, Comment, WebSocketMessage } from '../types/backend';
+import { useSolanaProgram } from '../lib/Solana';
+import { acceptLoan } from '../lib/instructions/CreateLoan';
+import { PublicKey } from '@solana/web3.js';
 
 // Helper functions
 const formatNumber = (num: number): string => {
@@ -31,6 +34,15 @@ const formatNumber = (num: number): string => {
 const shortenAddress = (address: string): string => {
   if (!address) return 'Unknown';
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+
+const normalizeDuration = (duration: number): number => {
+  // If duration is greater than 365, assume it's in seconds and convert to days
+  // Otherwise assume it's already in days
+  if (duration > 365) {
+    return Math.floor(duration / (24 * 60 * 60)); // Convert seconds to days
+  }
+  return duration; // Already in days
 };
 
 const formatDuration = (days: number): string => {
@@ -66,14 +78,21 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
 };
 
 export default function OfferDetailsScreen() {
+  console.log('OfferDetailsScreen: Component initializing');
+  
   const { selectedAccount } = useAuthorization();
   const { offerId } = useLocalSearchParams<{ offerId: string }>();
+  
+  console.log('OfferDetailsScreen: selectedAccount:', selectedAccount);
+  console.log('OfferDetailsScreen: offerId:', offerId);
   
   const [offer, setOffer] = useState<LoanOffer | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [acceptingOffer, setAcceptingOffer] = useState(false);
+  const { connection, wallet, program } = useSolanaProgram();
 
   const fetchOfferDetails = async () => {
     if (!offerId) return;
@@ -132,6 +151,74 @@ export default function OfferDetailsScreen() {
       }
     };
   }, [offerId]);
+
+  const handleAcceptOffer = async () => {
+    if (!offer || !selectedAccount?.publicKey) {
+      Alert.alert('Error', 'Please connect your wallet first');
+      return;
+    }
+
+    if (!program || !connection || !wallet) {
+      Alert.alert('Error', 'Solana program not available. Please try again.');
+      return;
+    }
+
+    setAcceptingOffer(true);
+    try {
+      // Validate that we have a proper loan mint address
+      if (!offer?.loan_mint) {
+        Alert.alert('Error', 'This loan offer has invalid token mint data. Please try refreshing the page or contact support.');
+        return;
+      }
+
+      // Validate that the loan mint looks like a valid PublicKey
+      try {
+        new PublicKey(offer.loan_mint);
+      } catch (mintError) {
+        Alert.alert('Error', 'This loan offer has an invalid token mint address. Please try a different offer.');
+        return;
+      }
+
+      const loanOfferData = {
+        tokenMint: offer.loan_mint, // Only use verified loan mint, no dangerous fallbacks
+        lenderPublicKey: offer?.lender_address || '',
+        amount: (offer?.amount || 0).toString(),
+      };
+
+      // Normalize duration from offer (convert from seconds to days if needed)
+      const normalizeDuration = (duration: number): number => {
+        if (duration > 365) {
+          return Math.floor(duration / (24 * 60 * 60)); // Convert seconds to days
+        }
+        return duration; // Already in days
+      };
+
+      const signature = await acceptLoan(
+        program,
+        connection,
+        wallet,
+        selectedAccount.publicKey!,
+        loanOfferData,
+        offerId, // Pass the offer ID for backend update
+        offer?.duration ? normalizeDuration(offer.duration) : undefined // Pass the actual duration
+      );
+
+      console.log('Loan accepted! Signature:', signature);
+      Alert.alert('Success', `Loan accepted! You can now use ${formatNumber(offer?.amount || 0)} ${offer?.token || 'tokens'}`);
+      
+      // Refresh offer details to show updated status
+      await fetchOfferDetails();
+      
+      // Navigate back to feed since this offer is now inactive
+      router.push('/(tabs)/feed');
+      
+    } catch (error: any) {
+      console.error('Error accepting loan:', error);
+      Alert.alert('Error', `Failed to accept loan: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setAcceptingOffer(false);
+    }
+  };
 
   const handleSubmitComment = async () => {
     if (!newComment.trim() || !offerId) {
@@ -237,10 +324,10 @@ export default function OfferDetailsScreen() {
                   <Ionicons name="person" size={24} color={Colors.textSecondary} />
                 </View>
                 <View style={styles.userDetails}>
-                  <Text style={styles.lenderAddress}>{shortenAddress(offer.lender_address)}</Text>
+                  <Text style={styles.lenderAddress}>{shortenAddress(offer?.lender_address || '')}</Text>
                   <View style={styles.statusContainer}>
-                    <View style={[styles.statusDot, offer.is_active ? styles.activeDot : styles.inactiveDot]} />
-                    <Text style={styles.statusText}>{offer.is_active ? 'Active' : 'Inactive'}</Text>
+                    <View style={[styles.statusDot, offer?.is_active ? styles.activeDot : styles.inactiveDot]} />
+                    <Text style={styles.statusText}>{offer?.is_active ? 'Active' : 'Inactive'}</Text>
                   </View>
                 </View>
               </View>
@@ -251,31 +338,50 @@ export default function OfferDetailsScreen() {
 
             <View style={styles.offerDetails}>
               <View style={styles.amountSection}>
-                <Text style={styles.amount}>{formatNumber(offer.amount)} BONK</Text>
-                <Text style={styles.token}>Collateral: {offer.token}</Text>
+                <Text style={styles.amount}>{formatNumber(offer?.loan_amount || offer?.amount || 0)} {offer?.loan_name || offer?.token || 'Token'}</Text>
+                <Text style={styles.token}>Collateral: {formatNumber(offer?.collateral_amount || 0)} {offer?.collateral_name || offer?.collateral_token || 'Collateral'}</Text>
               </View>
               
               <View style={styles.termsSection}>
                 <View style={styles.termItem}>
                   <Text style={styles.termLabel}>APY</Text>
-                  <Text style={styles.termValue}>{offer.apy.toFixed(1)}%</Text>
+                  <Text style={styles.termValue}>{(offer?.apy || 0).toFixed(1)}%</Text>
                 </View>
                 <View style={styles.termItem}>
                   <Text style={styles.termLabel}>Duration</Text>
-                  <Text style={styles.termValue}>{formatDuration(offer.duration)}</Text>
+                  <Text style={styles.termValue}>{formatDuration(normalizeDuration(offer?.duration || 0))}</Text>
                 </View>
                 <View style={styles.termItem}>
                   <Text style={styles.termLabel}>Created</Text>
-                  <Text style={styles.termValue}>{formatDate(offer.created_at)}</Text>
+                  <Text style={styles.termValue}>{offer?.created_at ? formatDate(offer.created_at) : 'N/A'}</Text>
                 </View>
               </View>
             </View>
 
-            {offer.is_active && (
-              <TouchableOpacity style={styles.acceptButton}>
-                <Text style={styles.acceptButtonText}>Accept Offer</Text>
-                <Ionicons name="arrow-forward" size={16} color={Colors.textLight} />
+            {offer?.is_active && selectedAccount?.publicKey && (
+              <TouchableOpacity 
+                style={[styles.acceptButton, acceptingOffer && styles.acceptButtonDisabled]}
+                onPress={handleAcceptOffer}
+                disabled={acceptingOffer}
+              >
+                {acceptingOffer ? (
+                  <>
+                    <ActivityIndicator size="small" color={Colors.textLight} />
+                    <Text style={styles.acceptButtonText}>Accepting...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.acceptButtonText}>Accept Offer</Text>
+                    <Ionicons name="arrow-forward" size={16} color={Colors.textLight} />
+                  </>
+                )}
               </TouchableOpacity>
+            )}
+            
+            {!selectedAccount?.publicKey && offer.is_active && (
+              <View style={styles.connectPromptButton}>
+                <Text style={styles.connectPromptText}>Connect wallet to accept offer</Text>
+              </View>
             )}
           </View>
 
@@ -482,6 +588,22 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontSize: Typography.base,
     fontWeight: FontWeight.semibold,
+  },
+  acceptButtonDisabled: {
+    opacity: 0.6,
+  },
+  connectPromptButton: {
+    backgroundColor: Colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+  },
+  connectPromptText: {
+    color: Colors.textSecondary,
+    fontSize: Typography.base,
+    fontWeight: FontWeight.medium,
   },
   commentsSection: {
     backgroundColor: Colors.backgroundWhite,

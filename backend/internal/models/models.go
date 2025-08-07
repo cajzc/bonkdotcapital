@@ -82,3 +82,40 @@ type PlatformStats struct {
 	TopLenders          []LenderStat `bson:"top_lenders" json:"top_lenders"`
 	PopularCollaterals  []string     `bson:"popular_collaterals" json:"popular_collaterals"`
 }
+
+type User struct {
+	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	WalletAddress          string             `bson:"wallet_address" json:"wallet_address"`
+	Username               *string            `bson:"username,omitempty" json:"username,omitempty"`
+	Email                  *string            `bson:"email,omitempty" json:"email,omitempty"`
+	CreditScore            int32              `bson:"credit_score" json:"credit_score"`
+	TotalLoansAsLender     int32              `bson:"total_loans_as_lender" json:"total_loans_as_lender"`
+	TotalLoansAsBorrower   int32              `bson:"total_loans_as_borrower" json:"total_loans_as_borrower"`
+	TotalVolumeLent        float64            `bson:"total_volume_lent" json:"total_volume_lent"`
+	TotalVolumeBorrowed    float64            `bson:"total_volume_borrowed" json:"total_volume_borrowed"`
+	DefaultCount           int32              `bson:"default_count" json:"default_count"`
+	SuccessfulLoansCount   int32              `bson:"successful_loans_count" json:"successful_loans_count"`
+	JoinDate               time.Time          `bson:"join_date" json:"join_date"`
+	LastActive             time.Time          `bson:"last_active" json:"last_active"`
+	IsActive               bool               `bson:"is_active" json:"is_active"`
+	CreatedAt              time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt              time.Time          `bson:"updated_at" json:"updated_at"`
+}
+
+type UserStats struct {
+	LoansCompleted int32   `bson:"loans_completed" json:"loans_completed"`
+	TotalVolume    float64 `bson:"total_volume" json:"total_volume"`
+	AverageAPY     float64 `bson:"average_apy" json:"average_apy"`
+	SuccessRate    float64 `bson:"success_rate" json:"success_rate"`
+}
+
+type UserProfile struct {
+	User                        User       `bson:"user" json:"user"`
+	ActiveLoansAsBorrower       []Loan     `bson:"active_loans_as_borrower" json:"active_loans_as_borrower"`
+	ActiveLoansAsLender         []Loan     `bson:"active_loans_as_lender" json:"active_loans_as_lender"`
+	CompletedLoansAsBorrower    []Loan     `bson:"completed_loans_as_borrower" json:"completed_loans_as_borrower"`
+	CompletedLoansAsLender      []Loan     `bson:"completed_loans_as_lender" json:"completed_loans_as_lender"`
+	ActiveOffers                []LoanOffer `bson:"active_offers" json:"active_offers"`
+	ActiveRequests              []LoanRequest `bson:"active_requests" json:"active_requests"`
+	TotalStats                  UserStats  `bson:"total_stats" json:"total_stats"`
+}

@@ -22,6 +22,7 @@ import { RPC_ENDPOINT } from '@/constants/RpcConnection';
 import { createLoanOffer } from '../../lib/instructions/CreateLoan';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { apiClient } from '../../lib/apiClient';
+import { createLoanInfoPDA } from '../../lib/CreatePDAs';
 
 export default function LendScreen() {
   const insets = useSafeAreaInsets();
@@ -38,6 +39,7 @@ export default function LendScreen() {
   const [interestRate, setInterestRate] = useState('5'); // Default 5%
   const [durationDays, setDurationDays] = useState('30'); // Default 30 days
   const [minScore, setMinScore] = useState('0'); // Default 0
+  const [collateralAmount, setCollateralAmount] = useState(''); // New field for collateral amount
 
   // Create connection once, not on every render
   const connection = React.useMemo(() => new Connection(RPC_ENDPOINT), []);
@@ -117,6 +119,11 @@ export default function LendScreen() {
       return;
     }
 
+    if (!collateralAmount || parseFloat(collateralAmount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid collateral amount');
+      return;
+    }
+
     if (!program || !connection || !wallet) {
       Alert.alert('Error', 'Solana program not available. Please try again.');
       return;
@@ -130,6 +137,17 @@ export default function LendScreen() {
 
     setIsSubmitting(true);
     try {
+      console.log('About to create loan offer with:');
+      console.log('- program:', !!program);
+      console.log('- connection:', !!connection);
+      console.log('- wallet:', !!wallet);
+      console.log('- userPublicKey:', userPublicKey.toString());
+      console.log('- selectedToken:', selectedToken);
+      console.log('- selectedAccount:', selectedAccount);
+      
+      // Add a small delay to ensure wallet connection is stable
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const signature = await createLoanOffer(
         program,
         connection,
@@ -140,52 +158,68 @@ export default function LendScreen() {
         selectedReceiveToken,
         interestRate,
         durationDays,
-        minScore
+        minScore,
+        collateralAmount
       );
       
       console.log('Transaction signature:', signature);
       
-      // Get the loan_info PDA address to use as unique identifier
-      const [loanInfoPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('loan_info'),
-          userPublicKey.toBuffer(),
-          new PublicKey(selectedToken.mint).toBuffer(),
-        ],
+      // Create PDA for the loan info to get offer address
+      const loanInfoPda = createLoanInfoPDA(
+        userPublicKey,
+        new PublicKey(selectedToken.mint.toString()),
         program.programId
       );
       
-      // Save to backend database
+      // Get accepted token mint based on selection
+      let acceptedTokenMint: string;
+      if (selectedReceiveToken === 'SOL') {
+        // Use wrapped SOL mint address
+        acceptedTokenMint = 'So11111111111111111111111111111111111111112';
+      } else if (selectedReceiveToken === 'BONK') {
+        // Use BONK mint address
+        acceptedTokenMint = 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263';
+      } else {
+        acceptedTokenMint = selectedToken.mint.toString();
+      }
+      
+      // Ensure user exists in database first
       try {
-        // Map frontend data to backend LoanOffer model based on IDL LoanInfo structure
-        const collateralMintAddress = selectedReceiveToken === 'SOL' 
-          ? 'So11111111111111111111111111111111111111112' 
-          : 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263';
+        await apiClient.getOrCreateUser(userPublicKey.toString());
+        console.log('User ensured in database for loan offer creation');
+      } catch (userError) {
+        console.warn('Could not create user in database:', userError);
+      }
 
+      // Save to backend database with all required fields
+      try {
         const loanOfferData = {
-          offer_address: loanInfoPda.toString(), // Use PDA address as unique identifier
+          offer_address: loanInfoPda.toString(),
           lender_address: userPublicKey.toString(),
           amount: parseFloat(lendingAmount),
           apy: parseFloat(interestRate),
+          duration: parseInt(durationDays) * 24 * 60 * 60, // Convert days to seconds
           token: getTokenSymbol(selectedToken.mint.toString()),
-          duration: parseInt(durationDays) * 24 * 60 * 60, // Convert days to seconds (matching IDL duration_seconds)
+          collateral_token: selectedReceiveToken,
+          collateral_amount: parseFloat(collateralAmount),
+          min_score: parseInt(minScore),
           is_active: true,
-          loan_mint: selectedToken.mint.toString(), // IDL: loan_token_mint
-          collateral_mint: collateralMintAddress, // IDL: accepted_token_mint
+          // New required fields
+          loan_mint: selectedToken.mint.toString(),
+          collateral_mint: acceptedTokenMint,
           loan_name: getTokenSymbol(selectedToken.mint.toString()),
           collateral_name: selectedReceiveToken,
-          loan_amount: parseFloat(lendingAmount), // IDL: amount (u64)
-          collateral_amount: 0 // Will be set when loan is taken
+          loan_amount: parseFloat(lendingAmount),
         };
-
-        const savedOffer = await apiClient.createLoanOffer(loanOfferData);
-        console.log('Offer saved to backend:', savedOffer);
         
-        Alert.alert('Success', `Loan offer created and saved!\nPDA: ${loanInfoPda.toString().slice(0, 8)}...\nTx: ${signature.slice(0, 8)}...`);
-      } catch (backendError: any) {
+        console.log('Sending loan offer data to backend:', loanOfferData);
+        const savedOffer = await apiClient.createLoanOffer(loanOfferData);
+        console.log('Saved offer to backend:', savedOffer);
+        
+        Alert.alert('Success', `Loan offer created for ${getTokenSymbol(selectedToken.mint.toString())} → ${selectedReceiveToken}!`);
+      } catch (backendError) {
         console.error('Failed to save to backend:', backendError);
-        // Still show success since on-chain transaction worked
-        Alert.alert('Partial Success', `Loan offer created on-chain! ${signature.slice(0, 8)}...\n\nNote: Backend save failed, but your offer is live on Solana.`);
+        Alert.alert('Partial Success', 'Loan offer created on blockchain but failed to save to database. The transaction is still valid.');
       }
 
       // Reset form
@@ -195,10 +229,34 @@ export default function LendScreen() {
       setInterestRate('5');
       setDurationDays('30');
       setMinScore('0');
+      setCollateralAmount('');
 
     } catch (error: any) {
       console.error('Error creating loan offer:', error);
-      Alert.alert('Error', `Failed to create loan offer: ${error?.message || 'Unknown error'}`);
+      
+      // Handle specific error types with user-friendly messages
+      let errorMessage = 'Unknown error';
+      if (error && error.message) {
+        if (error.message.includes('authorization') || error.message.includes('SolanaMobileWalletAdapterProtocolError')) {
+          errorMessage = 'Wallet authorization failed. Please try connecting your wallet again.';
+          Alert.alert('Wallet Error', errorMessage, [
+            { text: 'OK', style: 'default' },
+            { text: 'Reconnect Wallet', onPress: () => {
+              // User can manually reconnect by going back and forth
+              Alert.alert('Reconnection', 'Please disconnect and reconnect your wallet from the Connect button.');
+            }}
+          ]);
+          return;
+        } else if (error.message.includes('insufficient funds')) {
+          errorMessage = 'Insufficient funds to complete this transaction.';
+        } else if (error.message.includes('simulation failed')) {
+          errorMessage = 'Transaction validation failed. Please check your inputs and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('Error', `Failed to create loan offer: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -366,6 +424,21 @@ export default function LendScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              Collateral Amount {selectedReceiveToken ? `(${selectedReceiveToken})` : ''}
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder={selectedReceiveToken ? `e.g., 1000` : "Select collateral token first"}
+              placeholderTextColor={Colors.textTertiary}
+              value={collateralAmount}
+              onChangeText={setCollateralAmount}
+              keyboardType="numeric"
+              editable={!!selectedReceiveToken}
+            />
           </View>
         </View>
 

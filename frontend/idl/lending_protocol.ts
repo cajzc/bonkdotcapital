@@ -113,7 +113,11 @@ export type LendingProtocol = {
       ],
       "args": [
         {
-          "name": "amount",
+          "name": "loanAmount",
+          "type": "u64"
+        },
+        {
+          "name": "collateralAmount",
           "type": "u64"
         },
         {
@@ -121,7 +125,7 @@ export type LendingProtocol = {
           "type": "u16"
         },
         {
-          "name": "durationSlots",
+          "name": "durationSeconds",
           "type": "u64"
         },
         {
@@ -496,10 +500,7 @@ export type LendingProtocol = {
         {
           "name": "borrower",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "collateralVault"
-          ]
+          "signer": true
         },
         {
           "name": "lender"
@@ -527,12 +528,7 @@ export type LendingProtocol = {
           "address": "SysvarC1ock11111111111111111111111111111111"
         }
       ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
@@ -579,66 +575,76 @@ export type LendingProtocol = {
   "errors": [
     {
       "code": 6000,
-      "name": "invalidAmount",
+      "name": "invalidLoanAmount",
       "msg": "Loan amount must be greater than zero"
     },
     {
       "code": 6001,
+      "name": "invalidCollateralAmount",
+      "msg": "Collateral amount must be greater than zero"
+    },
+    {
+      "code": 6002,
+      "name": "invalidCollateralToken",
+      "msg": "Supplied token not accepted as collateral"
+    },
+    {
+      "code": 6003,
       "name": "collateralNotEnough",
       "msg": "Not enough tokens for collateral"
     },
     {
-      "code": 6002,
+      "code": 6004,
       "name": "invalidInterestRate",
       "msg": "Interest rate must be greater than zero"
     },
     {
-      "code": 6003,
+      "code": 6005,
       "name": "invalidDuration",
       "msg": "Loan duration must be greater than zero"
     },
     {
-      "code": 6004,
+      "code": 6006,
       "name": "invalidScore",
       "msg": "Minimum score must be valid (0-1000)"
     },
     {
-      "code": 6005,
+      "code": 6007,
       "name": "offerNotActive",
       "msg": "Loan offer is not active"
     },
     {
-      "code": 6006,
+      "code": 6008,
       "name": "insufficientScore",
       "msg": "Borrower score is insufficient"
     },
     {
-      "code": 6007,
+      "code": 6009,
       "name": "loanOfferExpired",
       "msg": "Loan offer has expired"
     },
     {
-      "code": 6008,
+      "code": 6010,
       "name": "loanAlreadyRepaid",
       "msg": "Loan already repaid"
     },
     {
-      "code": 6009,
+      "code": 6011,
       "name": "insufficientRepayment",
       "msg": "Insufficient repayment amount"
     },
     {
-      "code": 6010,
+      "code": 6012,
       "name": "loanRepaymentOverdue",
       "msg": "Loan repayment overdue it got liquidated"
     },
     {
-      "code": 6011,
+      "code": 6013,
       "name": "mathOverflow",
       "msg": "Math overflow occurred"
     },
     {
-      "code": 6012,
+      "code": 6014,
       "name": "loanAlreadyExists",
       "msg": "Borrower already has an active loan."
     }
@@ -690,11 +696,15 @@ export type LendingProtocol = {
             "type": "pubkey"
           },
           {
-            "name": "acceptedTokenMint",
+            "name": "collateralTokenMint",
             "type": "pubkey"
           },
           {
-            "name": "amount",
+            "name": "loanAmount",
+            "type": "u64"
+          },
+          {
+            "name": "collateralAmount",
             "type": "u64"
           },
           {

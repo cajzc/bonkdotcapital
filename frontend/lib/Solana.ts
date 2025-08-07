@@ -25,10 +25,25 @@ export function useSolanaProgram() {
     return {
       signTransaction: async (transaction: Transaction) => {
         return transact(async (wallet: Web3MobileWallet) => {
-          const authorizationResult = await wallet.authorize({
-            cluster: CLUSTER,
-            identity: APP_IDENTITY,
-          });
+          // Try to reauthorize with existing auth token if available
+          // Otherwise fall back to fresh authorization
+          let authorizationResult;
+          try {
+            if (selectedAccount && 'reauthorize' in wallet) {
+              console.log('Attempting to reauthorize with existing token...');
+              authorizationResult = await (wallet as any).reauthorize({
+                identity: APP_IDENTITY,
+              });
+            } else {
+              throw new Error('No existing authorization, need fresh auth');
+            }
+          } catch (reAuthError) {
+            console.log('Reauthorization failed, trying fresh authorization:', reAuthError);
+            authorizationResult = await wallet.authorize({
+              cluster: CLUSTER,
+              identity: APP_IDENTITY,
+            });
+          }
 
           const signedTransactions = await wallet.signTransactions({
             transactions: [transaction],
@@ -38,10 +53,25 @@ export function useSolanaProgram() {
       },
       signAllTransactions: async (transactions: Transaction[]) => {
         return transact(async (wallet: Web3MobileWallet) => {
-          const authorizationResult = await wallet.authorize({
-            cluster: CLUSTER,
-            identity: APP_IDENTITY,
-          });
+          // Try to reauthorize with existing auth token if available
+          // Otherwise fall back to fresh authorization
+          let authorizationResult;
+          try {
+            if (selectedAccount && 'reauthorize' in wallet) {
+              console.log('Attempting to reauthorize with existing token...');
+              authorizationResult = await (wallet as any).reauthorize({
+                identity: APP_IDENTITY,
+              });
+            } else {
+              throw new Error('No existing authorization, need fresh auth');
+            }
+          } catch (reAuthError) {
+            console.log('Reauthorization failed, trying fresh authorization:', reAuthError);
+            authorizationResult = await wallet.authorize({
+              cluster: CLUSTER,
+              identity: APP_IDENTITY,
+            });
+          }
 
           const signedTransactions = await wallet.signTransactions({
             transactions: transactions,

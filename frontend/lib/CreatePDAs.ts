@@ -2,34 +2,34 @@ global.Buffer = require('buffer').Buffer;
 
 import { PublicKey } from "@solana/web3.js";
 
-export function createLoanOfferPDA(lender: PublicKey, tokenMint: PublicKey, programId: PublicKey): PublicKey {
-    const [loanOfferPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from('loan_offer'), lender.toBuffer(), tokenMint.toBuffer()],
+export function createLoanInfoPDA(lender: PublicKey, tokenMint: PublicKey, programId: PublicKey): PublicKey {
+    const [loanInfoPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from('loan_info'), lender.toBuffer(), tokenMint.toBuffer()],
         programId
     );
-    return loanOfferPda;
+    return loanInfoPda;
 }
 
-export function createLoanPDA(borrower: PublicKey, loanOfferPda: PublicKey, programId: PublicKey): PublicKey {
-    const [loanPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from('loan'), loanOfferPda.toBuffer(), borrower.toBuffer()],
+export function createOpenLoanPDA(loanInfoPda: PublicKey, borrower: PublicKey, programId: PublicKey): PublicKey {
+    const [openLoanPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from('open_loan'), loanInfoPda.toBuffer(), borrower.toBuffer()],
         programId
     );
-    return loanPda;
+    return openLoanPda;
 }
 
-export function createVaultPDA(loanOfferPda: PublicKey, programId: PublicKey): PublicKey {
+export function createVaultPDA(loanInfoPda: PublicKey, programId: PublicKey): PublicKey {
     const [vaultPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from('vault'), loanOfferPda.toBuffer()],
+        [Buffer.from('vault'), loanInfoPda.toBuffer()],
         programId
     );
     return vaultPda;
 }
 
-export function createObligationPDA(borrower: PublicKey, programId: PublicKey): PublicKey {
-    const [obligationPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from('obligation'), borrower.toBuffer()],
+export function createCollateralVaultPDA(loanInfoPda: PublicKey, borrower: PublicKey, programId: PublicKey): PublicKey {
+    const [collateralVaultPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from('collateral_vault'), loanInfoPda.toBuffer(), borrower.toBuffer()],
         programId
     );
-    return obligationPda;
+    return collateralVaultPda;
 }

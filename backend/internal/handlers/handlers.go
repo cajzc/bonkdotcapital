@@ -211,3 +211,172 @@ func (app *AppContext) GetPlatformStatsHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, stats)
 }
+
+// CreateUserHandler creates a new user or returns existing user
+func (app *AppContext) CreateUserHandler(c *gin.Context) {
+	userAddress := c.Param("userAddress")
+	if userAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User address is required"})
+		return
+	}
+
+	var userRequest struct {
+		WalletAddress string  `json:"wallet_address"`
+		Username      *string `json:"username,omitempty"`
+		Email         *string `json:"email,omitempty"`
+	}
+	
+	if err := c.ShouldBindJSON(&userRequest); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	user, err := db.GetOrCreateUser(userAddress, userRequest.Username, userRequest.Email)
+	if err != nil {
+		log.Printf("Error creating/getting user: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create/get user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// GetUserHandler retrieves user by wallet address
+func (app *AppContext) GetUserHandler(c *gin.Context) {
+	userAddress := c.Param("userAddress")
+	if userAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User address is required"})
+		return
+	}
+
+	user, err := db.GetUserByAddress(userAddress)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		} else {
+			log.Printf("Error retrieving user: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// UpdateUserHandler updates user information
+func (app *AppContext) UpdateUserHandler(c *gin.Context) {
+	userAddress := c.Param("userAddress")
+	if userAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User address is required"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	user, err := db.UpdateUser(userAddress, updates)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		} else {
+			log.Printf("Error updating user: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// GetUserProfileHandler retrieves comprehensive user profile with all loans, offers, and stats
+func (app *AppContext) GetUserProfileHandler(c *gin.Context) {
+	userAddress := c.Param("userAddress")
+	if userAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User address is required"})
+		return
+	}
+
+	profile, err := db.GetUserProfile(userAddress)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User profile not found"})
+		} else {
+			log.Printf("Error retrieving user profile: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user profile"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, profile)
+}
+
+// GetUserLoansHandler retrieves all loans for a user (as lender or borrower)
+func (app *AppContext) GetUserLoansHandler(c *gin.Context) {
+	userAddress := c.Param("userAddress")
+	if userAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User address is required"})
+		return
+	}
+
+	loans, err := db.GetUserLoans(userAddress)
+	if err != nil {
+		log.Printf("Error retrieving user loans: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user loans"})
+		return
+	}
+
+	c.JSON(http.StatusOK, loans)
+}
+
+// GetUserOffersHandler retrieves all offers created by a user
+func (app *AppContext) GetUserOffersHandler(c *gin.Context) {
+	userAddress := c.Param("userAddress")
+	if userAddress == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User address is required"})
+		return
+	}
+
+	offers, err := db.GetUserOffers(userAddress)
+	if err != nil {
+		log.Printf("Error retrieving user offers: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user offers"})
+		return
+	}
+
+	c.JSON(http.StatusOK, offers)
+}
+
+// AcceptLoanOfferHandler handles accepting a loan offer and creating a loan record
+func (app *AppContext) AcceptLoanOfferHandler(c *gin.Context) {
+	offerID := c.Param("offerId")
+	if offerID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Offer ID is required"})
+		return
+	}
+
+	var acceptanceData struct {
+		BorrowerAddress     string `json:"borrower_address"`
+		TransactionSignature string `json:"transaction_signature"`
+		OpenLoanPDA         string `json:"open_loan_pda"`
+		CollateralVaultPDA  string `json:"collateral_vault_pda"`
+		StartDate           string `json:"start_date,omitempty"`
+		EndDate             string `json:"end_date,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&acceptanceData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	loan, err := db.AcceptLoanOffer(offerID, &acceptanceData)
+	if err != nil {
+		log.Printf("Error accepting loan offer: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to accept loan offer"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, loan)
+}

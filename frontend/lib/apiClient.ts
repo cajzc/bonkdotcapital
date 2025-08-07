@@ -7,6 +7,8 @@ import type {
   Loan, 
   Comment, 
   PlatformStats, 
+  User,
+  UserProfile,
   ApiError 
 } from '../types/backend';
 
@@ -77,6 +79,20 @@ class ApiClient {
     });
   }
 
+  async acceptLoanOffer(offerId: string, acceptanceData: {
+    borrower_address: string;
+    transaction_signature: string;
+    open_loan_pda: string;
+    collateral_vault_pda: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<Loan> {
+    return this.request<Loan>(`/offers/${offerId}/accept`, {
+      method: 'POST',
+      body: JSON.stringify(acceptanceData),
+    });
+  }
+
   // Loan Requests
   async getLoanRequests(): Promise<LoanRequest[]> {
     return this.request<LoanRequest[]>('/requests/');
@@ -88,11 +104,51 @@ class ApiClient {
 
   // User-specific data
   async getUserLoans(userAddress: string): Promise<Loan[]> {
-    return this.request<Loan[]>(`/users/${userAddress}/loans/`);
+    try {
+      return await this.request<Loan[]>(`/users/${userAddress}/loans/`);
+    } catch (error) {
+      console.warn('User-specific loans endpoint not available, returning empty array');
+      return [];
+    }
+  }
+
+  async getUserOffers(userAddress: string): Promise<LoanOffer[]> {
+    try {
+      return await this.request<LoanOffer[]>(`/users/${userAddress}/offers/`);
+    } catch (error) {
+      console.warn('User-specific offers endpoint not available, returning empty array');
+      return [];
+    }
   }
 
   async getUserRequests(userAddress: string): Promise<LoanRequest[]> {
-    return this.request<LoanRequest[]>(`/users/${userAddress}/requests/`);
+    try {
+      return await this.request<LoanRequest[]>(`/users/${userAddress}/requests/`);
+    } catch (error) {
+      console.warn('User-specific requests endpoint not available, returning empty array');
+      return [];
+    }
+  }
+
+  // Get user profile with all their loans, offers, and requests
+  async getUserProfile(userAddress: string): Promise<UserProfile> {
+    return this.request(`/users/${userAddress}/profile/`);
+  }
+
+  // Get or create user account
+  async getOrCreateUser(userAddress: string): Promise<User> {
+    return this.request(`/users/${userAddress}/`, {
+      method: 'POST',
+      body: JSON.stringify({ wallet_address: userAddress }),
+    });
+  }
+
+  // Update user information
+  async updateUser(userAddress: string, updates: Partial<User>): Promise<User> {
+    return this.request(`/users/${userAddress}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
   }
 
   // Comments
