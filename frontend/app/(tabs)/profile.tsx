@@ -43,11 +43,11 @@ export default function ProfileScreen() {
 
     setIsRepaying(true);
     try {
-      // TODO: Hardcoded loan data for now
+      // TODO: Hardcoded loan data for now - borrowing BONK with SOL collateral
       const payLoanData: PayLoanData = {
-        tokenMint: 'So11111111111111111111111111111111111111112', 
-        lenderPublicKey: '', 
-        borrowerPublicKey: userPublicKey.toString(),
+        tokenMint: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', // BONK mint (what you borrowed)
+        collateralTokenMint: 'So11111111111111111111111111111111111111112', // SOL mint (what you used as collateral)
+        lenderPublicKey: 'DY1Q6eLWtAuVZJtRVC64ZhCeBqwxwvVpWUwDJQQjSv55', 
       };
 
       const signature = await payLoan(
@@ -81,16 +81,16 @@ export default function ProfileScreen() {
               </View>
             </View>
             
-            <View style={styles.loanDetails}>
-              <View style={styles.loanDetailRow}>
-                <Text style={styles.loanDetailLabel}>Amount:</Text>
-                <Text style={styles.loanDetailValue}>25M BONK</Text>
-              </View>
-              
-              <View style={styles.loanDetailRow}>
-                <Text style={styles.loanDetailLabel}>Collateral:</Text>
-                <Text style={styles.loanDetailValue}>1,250 JUP</Text>
-              </View>
+                         <View style={styles.loanDetails}>
+               <View style={styles.loanDetailRow}>
+                 <Text style={styles.loanDetailLabel}>Borrowed:</Text>
+                 <Text style={styles.loanDetailValue}>25M BONK</Text>
+               </View>
+               
+               <View style={styles.loanDetailRow}>
+                 <Text style={styles.loanDetailLabel}>Collateral:</Text>
+                 <Text style={styles.loanDetailValue}>1.5 SOL</Text>
+               </View>
               
               <View style={styles.loanDetailRow}>
                 <Text style={styles.loanDetailLabel}>APY:</Text>
