@@ -1,14 +1,48 @@
 use anchor_lang::prelude::*;
 
-declare_id!("EgGEeoSmoZCBZdfyiTCFbPqhSABeFnWhUN6NqiUZEjH4");
+declare_id!("FJUYYdAmHJ996KqUen7jiD2AgbP3pgTU6KzRz28Lhhhn");
+
+pub mod errors;
+pub mod instructions;
+pub mod state;
+
+use instructions::*;
+
 
 #[program]
 pub mod lending_protocol {
     use super::*;
 
+    /// Testing purposes
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
+        msg!("Testing lending protocol: {:?}", ctx.program_id);
         Ok(())
+    }
+
+    pub fn create_loan(
+        ctx: Context<CreateLoan>,
+        loan_amount: u64,
+        collateral_amount: u64,
+        interest_rate_bps: u16,
+        duration_slots: u64,
+        min_score: u64,
+    ) -> Result<()> {
+        instructions::create_loan(
+            ctx,
+            loan_amount,
+            collateral_amount,
+            interest_rate_bps,
+            duration_slots,
+            min_score,
+        )
+    }
+
+    pub fn take_loan(ctx: Context<TakeLoan>) -> Result<()> {
+        instructions::take_loan(ctx)
+    }
+
+    pub fn pay_loan(ctx: Context<PayLoan>) -> Result<()> {
+        instructions::pay_loan(ctx)
     }
 }
 
