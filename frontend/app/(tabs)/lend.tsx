@@ -1,6 +1,9 @@
 global.Buffer = require('buffer').Buffer;
 
 import React, { useState, useEffect } from 'react';
+global.Buffer = require('buffer').Buffer;
+
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,8 +14,11 @@ import {
   ScrollView,
   Alert,
   Modal,
+  Alert,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius } from '../../constants';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius } from '../../constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSolanaProgram } from '../../lib/Solana';
@@ -26,6 +32,8 @@ import { createLoanInfoPDA } from '../../lib/CreatePDAs';
 
 export default function LendScreen() {
   const insets = useSafeAreaInsets();
+  const { selectedAccount } = useAuthorization();
+  const { program, wallet } = useSolanaProgram();
   const { selectedAccount } = useAuthorization();
   const { program, wallet } = useSolanaProgram();
   const [lendingAmount, setLendingAmount] = useState('');
@@ -328,6 +336,9 @@ export default function LendScreen() {
         <TouchableOpacity onPress={loadUserTokens} style={styles.debugButton}>
           <Text style={styles.debugButtonText}>Load Tokens</Text>
         </TouchableOpacity>
+        <TouchableOpacity onPress={loadUserTokens} style={styles.debugButton}>
+          <Text style={styles.debugButtonText}>Load Tokens</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -338,15 +349,39 @@ export default function LendScreen() {
             <Text style={styles.inputLabel}>
               Lending Amount {selectedToken ? `(${getTokenSymbol(selectedToken.mint.toString())})` : ''}
             </Text>
+            <Text style={styles.inputLabel}>
+              Lending Amount {selectedToken ? `(${getTokenSymbol(selectedToken.mint.toString())})` : ''}
+            </Text>
             <TextInput
               style={styles.textInput}
+              placeholder={selectedToken ? `e.g., ${Math.floor(selectedToken.balance * 0.1).toLocaleString()}` : "Select a token first"}
               placeholder={selectedToken ? `e.g., ${Math.floor(selectedToken.balance * 0.1).toLocaleString()}` : "Select a token first"}
               placeholderTextColor={Colors.textTertiary}
               value={lendingAmount}
               onChangeText={setLendingAmount}
               keyboardType="numeric"
               editable={!!selectedToken}
+              editable={!!selectedToken}
             />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Token to Loan</Text>
+            <TouchableOpacity 
+              style={styles.dropdown} 
+              onPress={() => setShowTokenModal(true)}
+            >
+              <Text style={[
+                styles.dropdownText, 
+                selectedToken ? styles.dropdownTextFilled : styles.dropdownTextPlaceholder
+              ]}>
+                {selectedToken 
+                  ? `${getTokenSymbol(selectedToken.mint.toString())} (${selectedToken.balance.toLocaleString()})`
+                  : 'Select token from your wallet'
+                }
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.inputGroup}>
@@ -377,15 +412,27 @@ export default function LendScreen() {
               value={interestRate}
               onChangeText={setInterestRate}
               keyboardType="numeric"
+            <Text style={styles.inputLabel}>Interest Rate (%)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g., 5"
+              placeholderTextColor={Colors.textTertiary}
+              value={interestRate}
+              onChangeText={setInterestRate}
+              keyboardType="numeric"
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Duration (days)</Text>
+            <Text style={styles.inputLabel}>Duration (days)</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g., 30"
+              placeholder="e.g., 30"
               placeholderTextColor={Colors.textTertiary}
+              value={durationDays}
+              onChangeText={setDurationDays}
               value={durationDays}
               onChangeText={setDurationDays}
               keyboardType="numeric"
@@ -401,9 +448,36 @@ export default function LendScreen() {
               value={minScore}
               onChangeText={setMinScore}
               keyboardType="numeric"
+            <Text style={styles.inputLabel}>Minimum Score</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g., 0"
+              placeholderTextColor={Colors.textTertiary}
+              value={minScore}
+              onChangeText={setMinScore}
+              keyboardType="numeric"
             />
           </View>
 
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Collateral Token</Text>
+            <View style={styles.tokenOptions}>
+              <TouchableOpacity 
+                style={[styles.tokenOption, selectedReceiveToken === 'SOL' && styles.tokenOptionSelected]}
+                onPress={() => setSelectedReceiveToken('SOL')}
+              >
+                <Text style={[styles.tokenOptionText, selectedReceiveToken === 'SOL' && styles.tokenOptionTextSelected]}>
+                  SOL
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tokenOption, selectedReceiveToken === 'BONK' && styles.tokenOptionSelected]}
+                onPress={() => setSelectedReceiveToken('BONK')}
+              >
+                <Text style={[styles.tokenOptionText, selectedReceiveToken === 'BONK' && styles.tokenOptionTextSelected]}>
+                  BONK
+                </Text>
+              </TouchableOpacity>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Collateral Token</Text>
             <View style={styles.tokenOptions}>
@@ -438,10 +512,32 @@ export default function LendScreen() {
               onChangeText={setCollateralAmount}
               keyboardType="numeric"
               editable={!!selectedReceiveToken}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              Collateral Amount {selectedReceiveToken ? `(${selectedReceiveToken})` : ''}
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder={selectedReceiveToken ? `e.g., 1000` : "Select collateral token first"}
+              placeholderTextColor={Colors.textTertiary}
+              value={collateralAmount}
+              onChangeText={setCollateralAmount}
+              keyboardType="numeric"
+              editable={!!selectedReceiveToken}
             />
           </View>
         </View>
 
+        <TouchableOpacity 
+          style={[styles.createButton, isSubmitting && styles.createButtonDisabled]} 
+          onPress={handleCreateOffer}
+          disabled={isSubmitting || !selectedToken || !selectedReceiveToken}
+        >
+          <Text style={styles.createButtonText}>
+            {isSubmitting ? 'Creating...' : 'Create Lending Offer'}
+          </Text>
         <TouchableOpacity 
           style={[styles.createButton, isSubmitting && styles.createButtonDisabled]} 
           onPress={handleCreateOffer}
@@ -474,6 +570,8 @@ export default function LendScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {renderTokenModal()}
 
       {renderTokenModal()}
     </SafeAreaView>
@@ -577,12 +675,93 @@ const styles = StyleSheet.create({
   createButtonDisabled: {
     opacity: 0.6,
   },
+  createButtonDisabled: {
+    opacity: 0.6,
+  },
   previewCard: {
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.xl,
     padding: Spacing.xl,
     marginBottom: Spacing.xl,
     ...Shadows.lg,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  modalTitle: {
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+  },
+  loadingText: {
+    fontSize: Typography.base,
+    color: Colors.textSecondary,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+  },
+  emptyText: {
+    fontSize: Typography.base,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
+  },
+  refreshButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+  },
+  refreshButtonText: {
+    color: Colors.textLight,
+    fontSize: Typography.base,
+    fontWeight: FontWeight.semibold,
+  },
+  tokenList: {
+    maxHeight: 300,
+  },
+  tokenItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  tokenInfo: {
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  tokenSymbol: {
+    fontSize: Typography.base,
+    fontWeight: FontWeight.medium,
+    color: Colors.textPrimary,
+  },
+  tokenBalance: {
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
   modalOverlay: {
     flex: 1,
@@ -688,6 +867,44 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: Colors.textLight,
   },
+  debugButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  debugButtonText: {
+    color: Colors.textLight,
+    fontSize: Typography.sm,
+    fontWeight: FontWeight.medium,
+  },
+  tokenOptions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  tokenOption: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
+    backgroundColor: Colors.borderLight,
+  },
+  tokenOptionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
+  },
+  tokenOptionText: {
+    fontSize: Typography.base,
+    fontWeight: FontWeight.medium,
+    color: Colors.textPrimary,
+  },
+  tokenOptionTextSelected: {
+    color: Colors.textLight,
+  },
+}); 
   debugButton: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
