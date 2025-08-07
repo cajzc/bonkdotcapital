@@ -34,6 +34,8 @@ pub enum Errors {
     LoanAlreadyExists,
     #[msg("Missing collateral vault token account.")]
     MissingCollateralVaultTokenAccount,
-    #[msg("Missing borrowertoken account.")]
+    #[msg("Missing borrower token account.")]
     MissingBorrowerTokenAccount,
+    #[msg("Missing borrower repay token account.")]
+    MissingBorrowerRepayTokenAccount,
 }

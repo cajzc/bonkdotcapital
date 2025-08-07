@@ -10,7 +10,6 @@ use anchor_spl::{
 };
 use std::str::FromStr;
 
-
 pub fn take_loan(ctx: Context<TakeLoan>) -> Result<()> {
     // The loaner wants sol as collateral
     if ctx.accounts.loan_info.collateral_token_mint.key() == Pubkey::from_str("So11111111111111111111111111111111111111112").unwrap() {
@@ -183,6 +182,7 @@ pub struct TakeLoan<'info> {
     #[account(constraint = loan_info.lender == lender.key())]
     /// CHECK: lender is only used for loan info pda derivation
     pub lender: AccountInfo<'info>,
+    /// Token being lent
     pub token_mint: InterfaceAccount<'info, Mint>,
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
