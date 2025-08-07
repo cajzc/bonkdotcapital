@@ -1,4 +1,6 @@
-import React from 'react';
+global.Buffer = require('buffer').Buffer;
+
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,107 +8,339 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Image,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, FontWeight, Shadows, BorderRadius, SemanticColors } from '../../constants';
+import ConnectButton from '@/components/ConnectButton';
+import { useAuthorization } from '../../lib/AuthorizationProvider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSolanaProgram } from '../../lib/Solana';
+import { takeLoan, TakeLoanData } from '../../lib/instructions/TakeLoan';
+import { apiClient } from '../../lib/apiClient';
+import type { LoanOffer, PlatformStats } from '../../types/backend';
+import { router } from 'expo-router';
+import { PublicKey } from '@solana/web3.js';
 
-interface RequestCardProps {
-  userImage: string;
-  username: string;
-  rating: number;
-  type: 'Lending' | 'Borrowing';
-  amount: string;
-  collateral: string;
-  apy: string;
-  duration: string;
-  description: string;
-  comments: number;
+// Helper functions
+const formatNumber = (num: number): string => {
+  if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+  if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+  return num.toString();
+};
+
+const shortenAddress = (address: string): string => {
+  if (!address) return 'Unknown';
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+
+const normalizeDuration = (duration: number): number => {
+  // If duration is greater than 365, assume it's in seconds and convert to days
+  // Otherwise assume it's already in days
+  if (duration > 365) {
+    return Math.floor(duration / (24 * 60 * 60)); // Convert seconds to days
+  }
+  return duration; // Already in days
+};
+
+const formatDuration = (days: number): string => {
+  if (days >= 365) return `${Math.floor(days / 365)} year${days >= 730 ? 's' : ''}`;
+  if (days >= 30) return `${Math.floor(days / 30)} month${days >= 60 ? 's' : ''}`;
+  return `${days} day${days !== 1 ? 's' : ''}`;
+};
+
+interface OfferCardProps {
+  offer: LoanOffer;
+  onLoanTaken?: () => void; // Callback for when loan is successfully taken
 }
 
-const RequestCard: React.FC<RequestCardProps> = ({
-  userImage,
-  username,
-  rating,
-  type,
-  amount,
-  collateral,
-  apy,
-  duration,
-  description,
-  comments,
-}) => {
-  const isLending = type === 'Lending';
+const OfferCard: React.FC<OfferCardProps> = ({ offer, onLoanTaken }) => {
+  console.log('OfferCard called with offer:', offer);
+  
+  // Safety check: ensure offer exists and has required fields
+  if (!offer) {
+    console.error('OfferCard: offer is null or undefined');
+    return <View><Text>Invalid offer data</Text></View>;
+  }
+
+  if (!offer.id) {
+    console.error('OfferCard: offer is missing ID field', offer);
+    return <View><Text>Offer missing ID</Text></View>;
+  }
+
+  if (!offer.lender_address) {
+    console.error('OfferCard: offer is missing lender_address field', offer);
+    return <View><Text>Offer missing lender address</Text></View>;
+  }
+
+  const { selectedAccount } = useAuthorization();
+  const { connection, wallet, program } = useSolanaProgram();
+  const [isBorrowing, setIsBorrowing] = useState(false);
+
+  const handleBorrow = async () => {
+    console.log('handleBorrow called');
+    console.log('Connection:', !!connection);
+    console.log('Wallet:', !!wallet);
+    console.log('Program:', !!program);
+    console.log('Selected Account:', !!selectedAccount);
+    console.log('Selected Account Public Key:', selectedAccount?.publicKey?.toString());
+
+    if (!connection || !wallet || !program) {
+      Alert.alert('Error', 'Solana connection or program not available. Please try again.');
+      return;
+    }
+
+    if (!selectedAccount?.publicKey) {
+      Alert.alert('Error', 'Please connect your wallet first');
+      return;
+    }
+
+    setIsBorrowing(true);
+    try {
+      // Validate that we have a proper loan mint address
+      if (!offer?.loan_mint) {
+        Alert.alert('Error', 'This loan offer has invalid token mint data. Please try refreshing the page or contact support.');
+        return;
+      }
+
+      // Validate that the loan mint looks like a valid PublicKey
+      try {
+        new PublicKey(offer.loan_mint);
+      } catch (mintError) {
+        Alert.alert('Error', 'This loan offer has an invalid token mint address. Please try a different offer.');
+        return;
+      }
+
+      const takeLoanData: TakeLoanData = {
+        tokenMint: offer.loan_mint, // Only use verified loan mint, no dangerous fallbacks
+        lenderPublicKey: offer?.lender_address || '',
+        amount: (offer?.amount || 0).toString(),
+      };
+
+      console.log('Calling takeLoan with data:', takeLoanData);
+      console.log('Borrower public key:', selectedAccount.publicKey?.toString());
+
+      // Normalize duration from offer (convert from seconds to days if needed)
+      const normalizeDuration = (duration: number): number => {
+        if (duration > 365) {
+          return Math.floor(duration / (24 * 60 * 60)); // Convert seconds to days
+        }
+        return duration; // Already in days
+      };
+
+      const signature = await takeLoan(
+        program,
+        connection,
+        wallet,
+        selectedAccount.publicKey,
+        takeLoanData,
+        offer.id, // Pass the offer ID for backend update
+        offer?.duration ? normalizeDuration(offer.duration) : undefined // Pass the actual duration
+      );
+      
+      console.log('Loan taken! Signature:', signature);
+      Alert.alert('Success', `Loan taken! You can now borrow ${formatNumber(offer?.amount || 0)} ${offer?.token || 'tokens'}`);
+
+      // Notify parent component to refresh data
+      if (onLoanTaken) {
+        console.log('Notifying parent component to refresh data...');
+        onLoanTaken();
+      }
+
+    } catch (error: any) {
+      console.error('Error taking loan:', error);
+      Alert.alert('Error', `Failed to take loan: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsBorrowing(false);
+    }
+  };
   
   return (
     <View style={styles.requestCard}>
       <View style={styles.requestHeader}>
         <View style={styles.userInfo}>
-          <Image source={{ uri: userImage }} style={styles.userImage} />
+          <View style={styles.userAvatar}>
+            <Ionicons name="person" size={20} color={Colors.textSecondary} />
+          </View>
           <View style={styles.userDetails}>
-            <Text style={styles.username}>{username}</Text>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={14} color={Colors.warning} />
-              <Text style={styles.rating}>{rating}</Text>
+            <Text style={styles.username}>{shortenAddress(offer?.lender_address || 'Unknown')}</Text>
+            <View style={styles.statusContainer}>
+              <View style={[styles.statusDot, offer?.is_active ? styles.activeDot : styles.inactiveDot]} />
+              <Text style={styles.statusText}>{offer?.is_active ? 'Active' : 'Inactive'}</Text>
             </View>
           </View>
         </View>
-        <View style={[styles.typeTag, isLending ? styles.lendingTag : styles.borrowingTag]}>
-          <Text style={[styles.typeText, isLending ? styles.lendingText : styles.borrowingText]}>
-            {type}
-          </Text>
+        <View style={styles.lendingTag}>
+          <Text style={styles.lendingText}>Lending</Text>
         </View>
       </View>
       
       <View style={styles.requestDetails}>
         <View style={styles.amountRow}>
-          <Text style={styles.amount}>{amount}</Text>
+          <Text style={styles.amount}>
+            {formatNumber(offer?.loan_amount || offer?.amount || 0)} {offer?.loan_name || offer?.token || 'Token'}
+          </Text>
           <Ionicons 
-            name={isLending ? "arrow-up" : "arrow-down"} 
+            name="arrow-up" 
             size={16} 
-            color={isLending ? Colors.success : Colors.info} 
+            color={Colors.success}
           />
-          <Text style={styles.collateral}>{collateral}</Text>
+          <Text style={styles.collateral}>
+            {formatNumber(offer?.collateral_amount || 0)} {offer?.collateral_name || offer?.collateral_token || 'Collateral'}
+          </Text>
         </View>
         <View style={styles.apyRow}>
-          <Text style={styles.apy}>{apy} APY</Text>
-          <Text style={styles.duration}>{duration}</Text>
+          <Text style={styles.apy}>{(offer?.apy || 0).toFixed(1)}% APY</Text>
+          <Text style={styles.duration}>
+            {formatDuration(normalizeDuration(offer?.duration || 0))}
+          </Text>
         </View>
       </View>
-      
-      <Text style={styles.description}>{description}</Text>
       
       <View style={styles.cardFooter}>
         <View style={styles.commentsContainer}>
           <Ionicons name="chatbubble-outline" size={16} color={Colors.textSecondary} />
-          <Text style={styles.commentsCount}>{comments}</Text>
+          <Text style={styles.commentsCount}>0</Text>
         </View>
-        <TouchableOpacity style={styles.viewDetailsButton}>
-          <Text style={styles.viewDetailsText}>View Details</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          {(() => {
+            console.log('OfferCard button render - offer.is_active:', offer?.is_active, 'selectedAccount.publicKey:', !!selectedAccount?.publicKey);
+            return null;
+          })()}
+          {offer?.is_active && selectedAccount?.publicKey && (
+            <TouchableOpacity 
+              style={[styles.borrowButton, isBorrowing && styles.borrowButtonDisabled]}
+              onPress={handleBorrow}
+              disabled={isBorrowing}
+            >
+              <Text style={styles.borrowButtonText}>
+                {isBorrowing ? 'Borrowing...' : 'Borrow'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          {/* Debug info - show why borrow button might be hidden */}
+          {!offer?.is_active && (
+            <Text style={{fontSize: 10, color: 'red'}}>Offer inactive</Text>
+          )}
+          {!selectedAccount?.publicKey && (
+            <Text style={{fontSize: 10, color: 'red'}}>No wallet connected</Text>
+          )}
+          <TouchableOpacity 
+            style={styles.viewDetailsButton}
+            onPress={() => router.push(`/offer-details?offerId=${offer?.id || ''}`)}
+          >
+            <Text style={styles.viewDetailsText}>View Details</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 };
 
 export default function FeedScreen() {
+  const { selectedAccount } = useAuthorization();
+  const insets = useSafeAreaInsets();
+  const [offers, setOffers] = useState<LoanOffer[]>([]);
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  const fetchOffers = async () => {
+    try {
+      const offersData = await apiClient.getLoanOffers();
+      console.log('Raw offers data from API:', offersData);
+      
+      // Validate and clean the offers data
+      const validOffers = (offersData || []).filter((offer) => {
+        if (!offer) {
+          console.warn('Found null/undefined offer, skipping');
+          return false;
+        }
+        
+        if (!offer.id) {
+          console.warn('Found offer without ID, skipping:', offer);
+          return false;
+        }
+        
+        if (!offer.lender_address) {
+          console.warn('Found offer without lender_address, skipping:', offer);
+          return false;
+        }
+
+        // Check if the offer has a valid loan_mint address
+        if (!offer.loan_mint) {
+          console.warn('Found offer without loan_mint, skipping:', offer);
+          return false;
+        }
+
+        // Validate that loan_mint is a valid PublicKey format
+        try {
+          new PublicKey(offer.loan_mint);
+        } catch (mintError) {
+          console.warn('Found offer with invalid loan_mint format, skipping:', offer.loan_mint, mintError);
+          return false;
+        }
+        
+        return true;
+      });
+      
+      console.log('Valid offers after filtering:', validOffers.length, 'out of', (offersData || []).length);
+      setOffers(validOffers);
+    } catch (error) {
+      console.error('Error fetching offers:', error);
+      Alert.alert('Error', 'Failed to load offers. Please try again.');
+      setOffers([]); // Set empty array on error
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const fetchPlatformStats = async () => {
+    try {
+      const stats = await apiClient.getPlatformStats();
+      setPlatformStats(stats);
+    } catch (error) {
+      console.error('Error fetching platform stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOffers();
+    fetchPlatformStats();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchOffers();
+    fetchPlatformStats();
+  };
+
+  const handleLoanTaken = async () => {
+    console.log('Loan taken, refreshing data...');
+    setRefreshing(true);
+    await Promise.all([fetchOffers(), fetchPlatformStats()]);
+    setRefreshing(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.appName}>BonkDotCapital</Text>
           <Text style={styles.appSubtitle}>P2P BONK Lending</Text>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color={Colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.connectButton}>
-            <Ionicons name="wallet-outline" size={16} color="white" />
-            <Text style={styles.connectText}>Connect</Text>
-          </TouchableOpacity>
+          <ConnectButton />
         </View>
       </View>
 
@@ -117,7 +351,9 @@ export default function FeedScreen() {
             <View style={styles.activeDot} />
           </View>
           <Text style={styles.statLabel}>Active</Text>
-          <Text style={styles.statValue}>247</Text>
+          <Text style={styles.statValue}>
+            {statsLoading ? "..." : (platformStats?.active_loans_count || 0).toLocaleString()}
+          </Text>
         </View>
         
         <View style={styles.statCard}>
@@ -125,7 +361,9 @@ export default function FeedScreen() {
             <Ionicons name="trending-up" size={20} color={Colors.success} />
           </View>
           <Text style={styles.statLabel}>Avg APY</Text>
-          <Text style={styles.statValue}>12.8%</Text>
+          <Text style={styles.statValue}>
+            {statsLoading ? "..." : `${(platformStats?.average_apy || 0).toFixed(1)}%`}
+          </Text>
         </View>
         
         <View style={styles.statCard}>
@@ -133,7 +371,9 @@ export default function FeedScreen() {
             <Ionicons name="link" size={20} color={Colors.primary} />
           </View>
           <Text style={styles.statLabel}>Volume</Text>
-          <Text style={styles.statValue}>2.4B</Text>
+          <Text style={styles.statValue}>
+            {statsLoading ? "..." : formatNumber(platformStats?.total_volume || 0)}
+          </Text>
         </View>
       </View>
 
@@ -153,32 +393,32 @@ export default function FeedScreen() {
       </View>
 
       {/* Feed Content */}
-      <ScrollView style={styles.feedContainer} showsVerticalScrollIndicator={false}>
-        <RequestCard
-          userImage="https://via.placeholder.com/40"
-          username="bonk_whale_420"
-          rating={4.8}
-          type="Lending"
-          amount="50M BONK"
-          collateral="150 SOL SOL"
-          apy="12.5%"
-          duration="30 days"
-          description="Looking for reliable SOL holders. Quick approval for 4.5+ reputation."
-          comments={3}
-        />
-        
-        <RequestCard
-          userImage="https://via.placeholder.com/40"
-          username="defi_degen"
-          rating={4.2}
-          type="Borrowing"
-          amount="25M BONK"
-          collateral="2,500 JUP JUP"
-          apy="15.2%"
-          duration="14 days"
-          description="Offering premium JUP tokens. Can add more if needed."
-          comments={7}
-        />
+      <ScrollView 
+        style={styles.feedContainer} 
+        contentContainerStyle={styles.feedContentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Loading offers...</Text>
+          </View>
+        ) : offers.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="document-outline" size={48} color={Colors.textTertiary} />
+            <Text style={styles.emptyText}>No offers available</Text>
+            <Text style={styles.emptySubtext}>Be the first to create a lending offer!</Text>
+          </View>
+        ) : (
+          offers
+            .filter((offer) => offer && offer.id) // Filter out null/undefined offers
+            .map((offer) => (
+              <OfferCard key={offer.id} offer={offer} onLoanTaken={handleLoanTaken} />
+            ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -194,7 +434,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: 10,
     paddingBottom: Spacing.xl,
   },
   headerLeft: {
@@ -298,6 +537,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: Spacing.xl,
   },
+  feedContentContainer: {
+    paddingBottom: 120, 
+  },
   requestCard: {
     backgroundColor: Colors.backgroundWhite,
     borderRadius: BorderRadius.xl,
@@ -310,25 +552,51 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.md,
+    gap: Spacing.sm,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: Spacing.sm,
+    maxWidth: '70%',
   },
-  userImage: {
+  userAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: Spacing.md,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  inactiveDot: {
+    backgroundColor: Colors.textTertiary,
+  },
+  statusText: {
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
   userDetails: {
     flex: 1,
+    minWidth: 0,
   },
   username: {
     fontSize: Typography.base,
     fontWeight: FontWeight.semibold,
     color: Colors.textPrimary,
     marginBottom: 2,
+    flexShrink: 1,
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -340,9 +608,13 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   typeTag: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    flexShrink: 0,
+    minWidth: 60,
+    maxWidth: 80,
   },
   lendingTag: {
     backgroundColor: SemanticColors.lending.background,
@@ -353,6 +625,8 @@ const styles = StyleSheet.create({
   typeText: {
     fontSize: Typography.xs,
     fontWeight: FontWeight.semibold,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   lendingText: {
     color: SemanticColors.lending.text,
@@ -425,4 +699,66 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-}); 
+  buttonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  payLoanButton: {
+    backgroundColor: Colors.success,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    ...Shadows.primary,
+  },
+  payLoanButtonDisabled: {
+    opacity: 0.6,
+  },
+  payLoanButtonText: {
+    color: Colors.textLight,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  borrowButton: {
+    backgroundColor: Colors.info,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    ...Shadows.primary,
+  },
+  borrowButtonDisabled: {
+    opacity: 0.6,
+  },
+  borrowButtonText: {
+    color: Colors.textLight,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Spacing.xxl,
+  },
+  loadingText: {
+    fontSize: Typography.base,
+    color: Colors.textSecondary,
+    marginTop: Spacing.md,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xxl,
+  },
+  emptyText: {
+    fontSize: Typography.lg,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textSecondary,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  emptySubtext: {
+    fontSize: Typography.base,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+  },
+});  
