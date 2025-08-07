@@ -32,4 +32,8 @@ pub enum Errors {
     MathOverflow,
     #[msg("Borrower already has an active loan.")]
     LoanAlreadyExists,
+    #[msg("Missing collateral vault token account.")]
+    MissingCollateralVaultTokenAccount,
+    #[msg("Missing borrowertoken account.")]
+    MissingBorrowerTokenAccount,
 }
