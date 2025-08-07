@@ -47,7 +47,7 @@ export default function ProfileScreen() {
       const payLoanData: PayLoanData = {
         borrowedTokenMint: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', // BONK mint (what you borrowed)
         collateralTokenMint: 'So11111111111111111111111111111111111111112', // SOL mint (what you used as collateral)
-        lenderPublicKey: 'DY1Q6eLWtAuVZJtRVC64ZhCeBqwxwvVpWUwDJQQjSv55', 
+        lenderPublicKey: 'LTivrVhxfvgwWQt2kogXn43Avdw5dpE3EtSmNrkeDvA', 
       };
 
       const signature = await payLoan(

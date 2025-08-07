@@ -36,7 +36,7 @@ export async function payLoan(
   console.log('Lender Public Key:', lenderPublicKey.toString());
   console.log('Borrower Public Key (connected wallet):', borrowerPublicKey.toString());
 
-  // Create PDAs using helpers - note: loanInfoPDA now uses loanTokenMint
+  // Create PDAs using helpers
   const loanInfoPda = createLoanInfoPDA(lenderPublicKey, borrowedTokenMint, program.programId);
   const openLoanPda = createOpenLoanPDA(loanInfoPda, borrowerPublicKey, program.programId);
   const collateralVaultPda = createCollateralVaultPDA(loanInfoPda, borrowerPublicKey, program.programId);
@@ -44,89 +44,42 @@ export async function payLoan(
   console.log('Expected loanInfoPDA:', 'BbdFE6GfTDRu1uDDefFB2dpfUFKFntxCXaN6LL4FVg6u');
   console.log('Expected collateralVaultPDA:', '6DhP9XDWikQR62zhSxfKbR5AA8Kgw3fZBKRXWyzMRWXC');
   
-  // Check if paying back in SOL or tokens
-  const isSOLBorrowed = payLoanData.borrowedTokenMint === SOL_MINT;
+  // Check if collateral is SOL
   const isSOLCollateral = payLoanData.collateralTokenMint === SOL_MINT;
   console.log('Token being repaid:', payLoanData.borrowedTokenMint === SOL_MINT ? 'SOL' : 'BONK');
   console.log('Collateral type:', isSOLCollateral ? 'SOL' : 'Token');
   
-  // lenderTokenAccount is always required (not optional in IDL)
+  // Create all required token accounts
   const lenderTokenAccount = createAssociatedTokenAccountPDA(lenderPublicKey, borrowedTokenMint);
-  
-  // These accounts are optional in the updated IDL
-  let borrowerCollateralTokenAccount: PublicKey | undefined;
-  let borrowerRepayTokenAccount: PublicKey | undefined;
-  let collateralVaultTokenAccount: PublicKey | undefined;
-  
-  // We borrowed an spl token, so we need to create a token account for the borrower to repay the loan
-  if (!isSOLBorrowed) {
-    borrowerRepayTokenAccount = createAssociatedTokenAccountPDA(borrowerPublicKey, borrowedTokenMint);
-    console.log('Created borrowerRepayTokenAccount for BONK repayment');
-    } 
-
-    // We used an spl token as collateral, so we need to create a token account so the borrower can receive the collateral
-    if (!isSOLCollateral) {
-      borrowerCollateralTokenAccount = createAssociatedTokenAccountPDA(borrowerPublicKey, collateralTokenMint);
-      collateralVaultTokenAccount = createAssociatedTokenAccountPDA(collateralVaultPda, collateralTokenMint);
-      console.log('Created collateral token accounts for non-SOL collateral');
-    } else {
-      console.log('SOL collateral - not creating collateral token accounts');
-    }
-
+  const borrowerTokenAccount = createAssociatedTokenAccountPDA(borrowerPublicKey, borrowedTokenMint);
+  const collateralVaultTokenAccount = createCollateralVaultTokenAccountPDA(collateralVaultPda, collateralTokenMint);
 
   console.log('Loan Info PDA:', loanInfoPda.toString());
   console.log('Open Loan PDA:', openLoanPda.toString());
   console.log('Collateral Vault PDA:', collateralVaultPda.toString());
-  console.log('Lender Token Account (always required):', lenderTokenAccount.toString());
-  console.log('Is SOL payment:', isSOLBorrowed);
-  
-  if (!isSOLBorrowed) {
-    console.log('Borrower Repay Token Account:', borrowerRepayTokenAccount?.toString());
-    
-    if (!isSOLCollateral) {
-      console.log('Borrower Collateral Token Account:', borrowerCollateralTokenAccount?.toString());
-      console.log('Collateral Vault Token Account:', collateralVaultTokenAccount?.toString());
-    } else {
-      console.log('SOL collateral - no collateral token accounts needed');
-    }
-  }
+  console.log('Lender Token Account:', lenderTokenAccount.toString());
+  console.log('Borrower Token Account:', borrowerTokenAccount.toString());
+  console.log('Collateral Vault Token Account:', collateralVaultTokenAccount.toString());
 
   try {
     console.log('About to call payLoan instruction...');
-    console.log('Payment type:', isSOLBorrowed ? 'SOL' : 'Token');
     
-    // Build accounts object conditionally based on SOL vs tokens
+    // Build accounts object - all accounts are required in new IDL
     const accounts: any = {
       openLoan: openLoanPda,
       loanInfo: loanInfoPda,
       collateralVault: collateralVaultPda,
+      borrowerTokenAccount: borrowerTokenAccount,
+      lenderTokenAccount: lenderTokenAccount,
+      collateralVaultTokenAccount: collateralVaultTokenAccount,
+      collateralTokenMint: collateralTokenMint,
+      loanedTokenMint: borrowedTokenMint,
       borrower: borrowerPublicKey,
       lender: lenderPublicKey,
-      loanTokenMint: borrowedTokenMint, // Updated to loanTokenMint
       tokenProgram: TOKEN_PROGRAM_ID,
-      systemProgram: SystemProgram.programId,
       associatedTokenProgram: new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'),
-      lenderTokenAccount: lenderTokenAccount, // Always required
+      systemProgram: SystemProgram.programId,
     };
-
-    // Add optional token accounts only for non-SOL payments
-    if (!isSOLBorrowed) {
-      accounts.borrowerRepayTokenAccount = borrowerRepayTokenAccount;
-      
-      // Only add collateral token accounts if collateral is not SOL
-      if (!isSOLCollateral) {
-        accounts.collateralVaultTokenAccount = collateralVaultTokenAccount;
-        accounts.borrowerCollateralTokenAccount = borrowerCollateralTokenAccount;
-        console.log('Added collateral token accounts for non-SOL collateral');
-      } else {
-        console.log('SOL collateral - excluding collateral token accounts');
-        delete accounts.collateralVaultTokenAccount;
-        delete accounts.borrowerCollateralTokenAccount;
-      }
-    } else {
-      // For SOL payments, we don't include the optional token accounts
-      console.log('SOL payment - excluding optional token accounts (borrowerCollateralTokenAccount, borrowerRepayTokenAccount, collateralVaultTokenAccount)');
-    }
 
     console.log('Final accounts being sent to instruction:', JSON.stringify(accounts, null, 2));
     
